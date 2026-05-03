@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T17:15:32.283Z",
-  "runStamp": "2026-05-03_131430",
+  "timestamp": "2026-05-03T19:07:37.754Z",
+  "runStamp": "2026-05-03_150630",
   "includeDangerous": false,
   "testFile": "group-i-window-intel/test.js",
   "id": "group-i-window-intel",
   "status": "pass",
-  "durationMs": 13206,
+  "durationMs": 13710,
   "notes": "Window intelligence tools returned expected structures and selector parity checks passed",
   "details": {
     "visibleWindows": 6,

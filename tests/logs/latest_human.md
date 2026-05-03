@@ -1,57 +1,59 @@
 # OS-Bridge Test Run
-- Timestamp: 2026-05-03T17:15:42.098Z
+- Timestamp: 2026-05-03T19:07:51.917Z
 - Node: v24.14.0
 - Platform: win32 10.0.22631
 
 ## Summary
-- Total: 22
-- Passed: 22
+- Total: 23
+- Passed: 23
 - Failed: 0
 - Skipped: 0
-- Duration (ms): 71832
+- Duration (ms): 81008
 
 ## Tests
-- [PASS] group-a-telemetry/test-get-open-ports (6068 ms)
+- [PASS] group-a-telemetry/test-get-open-ports (6160 ms)
   - notes: Open ports shape verified
-- [PASS] group-a-telemetry/test-get-processes (9163 ms)
+- [PASS] group-a-telemetry/test-get-processes (9194 ms)
   - notes: Process query respected limit and row shape
-- [PASS] group-a-telemetry/test-get-screen-size (1187 ms)
+- [PASS] group-a-telemetry/test-get-screen-size (1463 ms)
   - notes: Screen metrics shape validated
-- [PASS] group-a-telemetry/test-get-system-info (3374 ms)
+- [PASS] group-a-telemetry/test-get-system-info (4463 ms)
   - notes: System info keys present
-- [PASS] group-b-file-ops/test-file-ops-scenario (204 ms)
+- [PASS] group-b-file-ops/test-file-ops-scenario (426 ms)
   - notes: file-ops-demo: scenario valid, catalog updated, MCP round-trip write→read→list all pass
-- [PASS] group-b-file-ops/test-get-env-vars (7 ms)
+- [PASS] group-b-file-ops/test-get-env-vars (10 ms)
   - notes: get_environment_vars: all-mode, prefix-filter, and named-lookup all work
-- [PASS] group-b-file-ops/test-list-directory (21 ms)
+- [PASS] group-b-file-ops/test-list-directory (29 ms)
   - notes: list_directory: flat list, filter, recursive, and error case all pass
 - [PASS] group-b-file-ops/test-open-url (4 ms)
   - notes: open_url: bad-URL rejection validated; real launch skipped (pass --dangerous to enable)
 - [PASS] group-b-file-ops/test-read-file (5 ms)
   - notes: read_file returned correct content
-- [PASS] group-b-file-ops/test-write-file (10 ms)
+- [PASS] group-b-file-ops/test-write-file (14 ms)
   - notes: write_file created and appended correctly; verified via read_file
-- [PASS] group-c-input-control/test-move-mouse-gates (6 ms)
+- [PASS] group-c-input-control/test-move-mouse-gates (7 ms)
   - notes: move_mouse correctly blocked by both safety gates
-- [PASS] group-e-control-state/test-control-state-transitions (6 ms)
+- [PASS] group-e-control-state/test-control-state-transitions (13 ms)
   - notes: Control state transitions behaved as expected
-- [PASS] group-e-control-state/test-execution-profile (4 ms)
+- [PASS] group-e-control-state/test-execution-profile (3 ms)
   - notes: Execution profile mode toggling verified
-- [PASS] group-f-visual/test-get-window-rect (5729 ms)
+- [PASS] group-f-visual/test-get-window-rect (6134 ms)
   - notes: get_window_rect: error case and shape validation passed
-- [PASS] group-f-visual/test-screenshot-window (6385 ms)
+- [PASS] group-f-visual/test-screenshot-window (6737 ms)
   - notes: screenshot_window: fallback + real window capture both pass
-- [PASS] group-g-shell-sessions/test-shell-session-lifecycle (1249 ms)
+- [PASS] group-g-shell-sessions/test-shell-session-lifecycle (1607 ms)
   - notes: shell_open / shell_send / shell_read / shell_list_sessions / shell_close all pass
-- [PASS] group-h-process-intel (15003 ms)
+- [PASS] group-h-process-intel (16327 ms)
   - notes: Process intelligence tools returned expected structures and wait/process checks passed
-- [PASS] group-i-window-intel (13206 ms)
+- [PASS] group-i-window-intel (13710 ms)
   - notes: Window intelligence tools returned expected structures and selector parity checks passed
-- [PASS] group-j-file-intel (27 ms)
+- [PASS] group-j-file-intel (32 ms)
   - notes: File system intelligence tools all returned expected structures
-- [PASS] group-k-diagnostics (7504 ms)
+- [PASS] group-k-diagnostics (8465 ms)
   - notes: check_service_status: Spooler found, status=Running; check_service_status: missing service correctly returned found=false; get_installed_software: 5 Microsoft entries found; get_startup_items: 9 startup items; get_event_log_entries: 5 Application log entries
-- [PASS] group-l-prompts (5 ms)
+- [PASS] group-l-prompts (6 ms)
   - notes: prompts/list: 5 prompts found; prompts/get automate_app: correct structure and interpolation; prompts/get find_memory_hogs: returned workflow message; prompts/get monitor_file: filePath interpolated correctly; prompts/get unknown: error correctly returned
-- [PASS] integration/test-clipboard-roundtrip (2253 ms)
+- [PASS] group-m-contracts (4310 ms)
+  - notes: write_file required-arg validation envelope passed; enum validation check passed; additionalProperties enforcement passed; success structured envelope passed; image metadata envelope passed; unknown tool envelope passed
+- [PASS] integration/test-clipboard-roundtrip (1320 ms)
   - notes: Clipboard roundtrip succeeded

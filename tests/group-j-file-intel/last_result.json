@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T17:15:32.316Z",
-  "runStamp": "2026-05-03_131430",
+  "timestamp": "2026-05-03T19:07:37.795Z",
+  "runStamp": "2026-05-03_150630",
   "includeDangerous": false,
   "testFile": "group-j-file-intel/test.js",
   "id": "group-j-file-intel",
   "status": "pass",
-  "durationMs": 27,
+  "durationMs": 32,
   "notes": "File system intelligence tools all returned expected structures",
   "details": {
     "testedTools": [

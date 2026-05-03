@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T17:14:50.678Z",
-  "runStamp": "2026-05-03_131430",
+  "timestamp": "2026-05-03T19:06:53.200Z",
+  "runStamp": "2026-05-03_150630",
   "includeDangerous": false,
   "testFile": "group-e-control-state/test-execution-profile/test.js",
   "id": "group-e-control-state/test-execution-profile",
   "status": "pass",
-  "durationMs": 4,
+  "durationMs": 3,
   "notes": "Execution profile mode toggling verified",
   "details": null
 }

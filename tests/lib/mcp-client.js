@@ -77,22 +77,28 @@ class McpClient {
 
     const content = Array.isArray(result.content) ? result.content : [];
     const first = content[0] || {};
+    const structured = result.structuredContent || null;
 
     if (result.isError) {
+      const structuredErr = structured && structured.error ? structured.error : null;
       return {
         ok: false,
-        error: String(first.text || 'Unknown tool error'),
+        error: String((structuredErr && structuredErr.message) || first.text || 'Unknown tool error'),
+        errorInfo: structuredErr,
         raw: result,
       };
     }
 
     if (first.type === 'image') {
+      const warningText = content.find((c) => c && c.type === 'text' && c.text)?.text || null;
       return {
         ok: true,
         image: {
           mimeType: first.mimeType,
           data: first.data,
+          warning: warningText || (structured && structured.imageMeta ? structured.imageMeta.warning : null),
         },
+        json: structured && structured.imageMeta ? structured.imageMeta : null,
         raw: result,
       };
     }
@@ -105,10 +111,15 @@ class McpClient {
       json = null;
     }
 
+    const normalizedJson = (json && typeof json === 'object' && json.ok === true && Object.prototype.hasOwnProperty.call(json, 'data'))
+      ? json.data
+      : json;
+
     return {
       ok: true,
       text,
-      json,
+      json: normalizedJson,
+      structured,
       raw: result,
     };
   }

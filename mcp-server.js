@@ -226,6 +226,217 @@ function tryJson(str) {
   try { return JSON.parse(str); } catch { return str; }
 }
 
+class ToolContractError extends Error {
+  constructor({ code, category, message, retryable = false, suggestedAction = '', details = null }) {
+    super(message || 'Tool error');
+    this.name = 'ToolContractError';
+    this.code = code || 'tool_error';
+    this.category = category || 'internal';
+    this.retryable = Boolean(retryable);
+    this.suggestedAction = suggestedAction || '';
+    this.details = details;
+  }
+}
+
+function validateSchemaValue(schema, value, pathName, errors) {
+  if (!schema || typeof schema !== 'object') return;
+
+  if (schema.type) {
+    switch (schema.type) {
+      case 'object': {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+          errors.push(`${pathName} must be an object`);
+          return;
+        }
+
+        const props = schema.properties || {};
+        const required = Array.isArray(schema.required) ? schema.required : [];
+        for (const reqKey of required) {
+          if (!Object.prototype.hasOwnProperty.call(value, reqKey)) {
+            errors.push(`${pathName}.${reqKey} is required`);
+          }
+        }
+
+        if (schema.additionalProperties === false) {
+          for (const key of Object.keys(value)) {
+            if (!Object.prototype.hasOwnProperty.call(props, key)) {
+              errors.push(`${pathName}.${key} is not allowed`);
+            }
+          }
+        }
+
+        for (const [key, propSchema] of Object.entries(props)) {
+          if (Object.prototype.hasOwnProperty.call(value, key)) {
+            validateSchemaValue(propSchema, value[key], `${pathName}.${key}`, errors);
+          }
+        }
+        break;
+      }
+      case 'array': {
+        if (!Array.isArray(value)) {
+          errors.push(`${pathName} must be an array`);
+          return;
+        }
+        if (schema.items) {
+          value.forEach((item, idx) => validateSchemaValue(schema.items, item, `${pathName}[${idx}]`, errors));
+        }
+        break;
+      }
+      case 'string': {
+        if (typeof value !== 'string') {
+          errors.push(`${pathName} must be a string`);
+          return;
+        }
+        if (schema.minLength != null && value.length < schema.minLength) {
+          errors.push(`${pathName} must have min length ${schema.minLength}`);
+        }
+        if (schema.maxLength != null && value.length > schema.maxLength) {
+          errors.push(`${pathName} must have max length ${schema.maxLength}`);
+        }
+        break;
+      }
+      case 'number': {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          errors.push(`${pathName} must be a number`);
+          return;
+        }
+        if (schema.minimum != null && value < schema.minimum) {
+          errors.push(`${pathName} must be >= ${schema.minimum}`);
+        }
+        if (schema.maximum != null && value > schema.maximum) {
+          errors.push(`${pathName} must be <= ${schema.maximum}`);
+        }
+        break;
+      }
+      case 'integer': {
+        if (!Number.isInteger(value)) {
+          errors.push(`${pathName} must be an integer`);
+          return;
+        }
+        if (schema.minimum != null && value < schema.minimum) {
+          errors.push(`${pathName} must be >= ${schema.minimum}`);
+        }
+        if (schema.maximum != null && value > schema.maximum) {
+          errors.push(`${pathName} must be <= ${schema.maximum}`);
+        }
+        break;
+      }
+      case 'boolean': {
+        if (typeof value !== 'boolean') {
+          errors.push(`${pathName} must be a boolean`);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  if (Array.isArray(schema.enum) && !schema.enum.includes(value)) {
+    errors.push(`${pathName} must be one of: ${schema.enum.join(', ')}`);
+  }
+}
+
+function getToolDefinitionByName(name) {
+  return TOOLS.find((t) => t.name === name) || null;
+}
+
+function validateToolCallParams(toolName, toolArgs) {
+  if (!toolName || typeof toolName !== 'string') {
+    throw new ToolContractError({
+      code: 'invalid_arguments',
+      category: 'validation',
+      message: 'tools/call requires a valid tool name string',
+      retryable: false,
+      suggestedAction: 'Pass a valid tool name from tools/list.',
+    });
+  }
+
+  const toolDef = getToolDefinitionByName(toolName);
+  if (!toolDef) {
+    throw new ToolContractError({
+      code: 'tool_not_found',
+      category: 'not_found',
+      message: `Unknown tool: ${toolName}`,
+      retryable: false,
+      suggestedAction: 'Call tools/list and choose a supported tool name.',
+    });
+  }
+
+  const args = (toolArgs == null) ? {} : toolArgs;
+  const schema = toolDef.inputSchema || { type: 'object', properties: {} };
+  const errors = [];
+  validateSchemaValue(schema, args, 'arguments', errors);
+
+  if (errors.length > 0) {
+    throw new ToolContractError({
+      code: 'invalid_arguments',
+      category: 'validation',
+      message: `Invalid arguments for ${toolName}`,
+      retryable: false,
+      suggestedAction: 'Check tools/list inputSchema and resend valid arguments.',
+      details: { toolName, errors },
+    });
+  }
+
+  return { toolDef, args };
+}
+
+function normalizeToolError(err, toolName) {
+  if (err instanceof ToolContractError) return err;
+
+  const msg = String((err && err.message) || err || 'Unknown tool error');
+  const lower = msg.toLowerCase();
+
+  if (lower.includes('timed out') || lower.includes('timeout')) {
+    return new ToolContractError({
+      code: 'tool_timeout',
+      category: 'timeout',
+      message: msg,
+      retryable: true,
+      suggestedAction: 'Retry with a larger timeout or narrower operation scope.',
+    });
+  }
+
+  if (lower.includes('not found') || lower.includes('no window found') || lower.includes('no session')) {
+    return new ToolContractError({
+      code: 'not_found',
+      category: 'not_found',
+      message: msg,
+      retryable: false,
+      suggestedAction: 'Refresh state and provide an existing resource selector.',
+    });
+  }
+
+  if (lower.includes('required') || lower.includes('must be') || lower.includes('one of')) {
+    return new ToolContractError({
+      code: 'invalid_arguments',
+      category: 'validation',
+      message: msg,
+      retryable: false,
+      suggestedAction: 'Check tool inputSchema and correct argument values.',
+    });
+  }
+
+  if (lower.includes('denied') || lower.includes('permission') || lower.includes('not permitted')) {
+    return new ToolContractError({
+      code: 'permission_denied',
+      category: 'permission',
+      message: msg,
+      retryable: false,
+      suggestedAction: 'Adjust permissions or run with required privileges.',
+    });
+  }
+
+  return new ToolContractError({
+    code: 'tool_error',
+    category: 'internal',
+    message: msg,
+    retryable: false,
+    suggestedAction: 'Review the tool error details and retry if conditions changed.',
+  });
+}
+
 // ── SendKeys escaping (for literal text typing) ───────────────────────────────
 function escapeSendKeys(text) {
   // Wrap SendKeys special chars in {} so they are typed literally
@@ -2382,16 +2593,50 @@ function send(obj) {
 }
 
 function makeResult(data) {
-  const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-  return { content: [{ type: 'text', text }], isError: false };
+  const structured = { ok: true, data };
+  const text = JSON.stringify(structured, null, 2);
+  return { content: [{ type: 'text', text }], structuredContent: structured, isError: false };
 }
 
-function makeErrorResult(msg) {
-  return { content: [{ type: 'text', text: String(msg) }], isError: true };
+function makeErrorResult(err, toolName) {
+  const tErr = normalizeToolError(err, toolName);
+  const structured = {
+    ok: false,
+    toolName: toolName || null,
+    error: {
+      code: tErr.code,
+      category: tErr.category,
+      message: tErr.message,
+      retryable: tErr.retryable,
+      suggestedAction: tErr.suggestedAction,
+      details: tErr.details,
+    },
+  };
+  return {
+    content: [{ type: 'text', text: tErr.message }],
+    structuredContent: structured,
+    isError: true,
+  };
 }
 
 function makeImageResult(data) {
-  return { content: [{ type: 'image', data: data.data, mimeType: data.mimeType }], isError: false };
+  const content = [{ type: 'image', data: data.data, mimeType: data.mimeType }];
+  if (data.warning) {
+    content.push({ type: 'text', text: data.warning });
+  }
+  return {
+    content,
+    structuredContent: {
+      ok: true,
+      imageMeta: {
+        mimeType: data.mimeType,
+        fallbackUsed: Boolean(data.warning),
+        warning: data.warning || null,
+        matchedBy: data.matchedBy || null,
+      },
+    },
+    isError: false,
+  };
 }
 
 const rl = readline.createInterface({ input: process.stdin, terminal: false });
@@ -2443,9 +2688,10 @@ rl.on('line', async (rawLine) => {
 
       case 'tools/call': {
         const toolName = params && params.name;
-        const toolArgs = (params && params.arguments) || {};
+        const toolArgs = (params && Object.prototype.hasOwnProperty.call(params, 'arguments')) ? params.arguments : {};
         try {
-          const data = await handleTool(toolName, toolArgs);
+          const validated = validateToolCallParams(toolName, toolArgs);
+          const data = await handleTool(toolName, validated.args);
           // Screenshot returns image content
           if (data && data._isImage) {
             result = makeImageResult(data);
@@ -2453,7 +2699,7 @@ rl.on('line', async (rawLine) => {
             result = makeResult(data);
           }
         } catch (err) {
-          result = makeErrorResult(`Error in ${toolName}: ${err.message}`);
+          result = makeErrorResult(err, toolName);
         }
         break;
       }
