@@ -1010,6 +1010,216 @@ if (-not $proc) {
   return result;
 }
 
+// ── Wave 2: Window Intelligence ───────────────────────────────────────────────
+
+async function listWindowsDetailed() {
+  const script = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public class WinDetail {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
+    [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr h);
+    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr h);
+}
+'@ -ErrorAction SilentlyContinue
+
+$procs = Get-Process | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero -and $_.MainWindowTitle -ne '' }
+$result = @()
+foreach ($p in $procs) {
+    $rect = New-Object WinDetail+RECT
+    [WinDetail]::GetWindowRect($p.MainWindowHandle, [ref]$rect) | Out-Null
+    $w = $rect.Right - $rect.Left; $h = $rect.Bottom - $rect.Top
+    $state = if ([WinDetail]::IsIconic($p.MainWindowHandle)) { 'minimized' }
+             elseif ([WinDetail]::IsZoomed($p.MainWindowHandle)) { 'maximized' }
+             else { 'normal' }
+    $result += @{
+        pid         = [int]$p.Id
+        processName = $p.ProcessName
+        title       = $p.MainWindowTitle
+        x           = $rect.Left
+        y           = $rect.Top
+        width       = $w
+        height      = $h
+        state       = $state
+        visible     = [bool][WinDetail]::IsWindowVisible($p.MainWindowHandle)
+        hwnd        = [string]$p.MainWindowHandle
+    }
+}
+$result | ConvertTo-Json -Depth 3 -Compress`;
+  return tryJson(psRun(script, 20000));
+}
+
+async function moveResizeWindow(args) {
+  checkInputAllowed();
+  if (!args.title) throw new Error('title required');
+  await maybeAnnounceAction('move_resize_window', args);
+  const title = args.title.replace(/'/g, "''");
+  const xArg    = Number.isFinite(args.x)      ? args.x      : null;
+  const yArg    = Number.isFinite(args.y)       ? args.y      : null;
+  const wArg    = Number.isFinite(args.width)   ? args.width  : null;
+  const hArg    = Number.isFinite(args.height)  ? args.height : null;
+  const script = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public class WinMove {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr h, int x, int y, int w, int h, bool repaint);
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
+}
+'@ -ErrorAction SilentlyContinue
+$proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
+if (-not $proc) { throw "No window found matching: ${title}" }
+# Restore if minimized/maximized first
+[WinMove]::ShowWindow($proc.MainWindowHandle, 9) | Out-Null
+Start-Sleep -Milliseconds 80
+$rect = New-Object WinMove+RECT
+[WinMove]::GetWindowRect($proc.MainWindowHandle, [ref]$rect) | Out-Null
+$nx = if (${xArg ?? 'null'} -ne $null) { ${xArg ?? '$rect.Left'} } else { $rect.Left }
+$ny = if (${yArg ?? 'null'} -ne $null) { ${yArg ?? '$rect.Top'} } else { $rect.Top }
+$nw = if (${wArg ?? 'null'} -ne $null) { ${wArg ?? '1'} } else { $rect.Right - $rect.Left }
+$nh = if (${hArg ?? 'null'} -ne $null) { ${hArg ?? '1'} } else { $rect.Bottom - $rect.Top }
+[WinMove]::MoveWindow($proc.MainWindowHandle, $nx, $ny, $nw, $nh, $true) | Out-Null
+"moved: $($proc.MainWindowTitle) → x=$nx y=$ny w=$nw h=$nh"`;
+
+  // Build cleaner PS without JS null coalescing confusion
+  const nx = xArg !== null ? String(xArg) : '$rect.Left';
+  const ny = yArg !== null ? String(yArg) : '$rect.Top';
+  const nw = wArg !== null ? String(wArg) : '($rect.Right - $rect.Left)';
+  const nh = hArg !== null ? String(hArg) : '($rect.Bottom - $rect.Top)';
+  const ps = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public class WinMove2 {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr h, int x, int y, int w, int h, bool repaint);
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
+}
+'@ -ErrorAction SilentlyContinue
+$proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
+if (-not $proc) { throw "No window found matching: ${title}" }
+[WinMove2]::ShowWindow($proc.MainWindowHandle, 9) | Out-Null
+Start-Sleep -Milliseconds 80
+$rect = New-Object WinMove2+RECT
+[WinMove2]::GetWindowRect($proc.MainWindowHandle, [ref]$rect) | Out-Null
+$nx = ${nx}; $ny = ${ny}; $nw = ${nw}; $nh = ${nh}
+[WinMove2]::MoveWindow($proc.MainWindowHandle, $nx, $ny, $nw, $nh, $true) | Out-Null
+"moved: $($proc.MainWindowTitle) to x=$nx y=$ny w=$nw h=$nh"`;
+  return psRun(ps, 10000);
+}
+
+async function minimizeMaximizeWindow(args) {
+  checkInputAllowed();
+  if (!args.title) throw new Error('title required');
+  const action = (args.action || 'minimize').toLowerCase();
+  if (!['minimize', 'maximize', 'restore'].includes(action)) throw new Error('action must be minimize, maximize, or restore');
+  await maybeAnnounceAction('minimize_maximize_window', args);
+  const title = args.title.replace(/'/g, "''");
+  // SW_MINIMIZE=6, SW_MAXIMIZE=3, SW_RESTORE=9
+  const cmdMap = { minimize: 6, maximize: 3, restore: 9 };
+  const swCmd = cmdMap[action];
+  const ps = `
+${PS_WINFOCUS}
+$proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
+if (-not $proc) { throw "No window found matching: ${title}" }
+[WinFocus]::ShowWindow($proc.MainWindowHandle, ${swCmd}) | Out-Null
+"${action}: $($proc.MainWindowTitle)"`;
+  return psRun(ps, 8000);
+}
+
+async function getFocusedAppState() {
+  const script = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public class FocusedApp {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint p);
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+    [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
+    [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr h);
+}
+'@ -ErrorAction SilentlyContinue
+$hwnd = [FocusedApp]::GetForegroundWindow()
+$sb   = New-Object System.Text.StringBuilder(1024)
+[FocusedApp]::GetWindowText($hwnd, $sb, 1024) | Out-Null
+$pid2 = [uint32]0
+[FocusedApp]::GetWindowThreadProcessId($hwnd, [ref]$pid2) | Out-Null
+$proc = Get-Process -Id $pid2 -ErrorAction SilentlyContinue
+$rect = New-Object FocusedApp+RECT
+[FocusedApp]::GetWindowRect($hwnd, [ref]$rect) | Out-Null
+$state = if ([FocusedApp]::IsIconic($hwnd)) { 'minimized' }
+         elseif ([FocusedApp]::IsZoomed($hwnd)) { 'maximized' }
+         else { 'normal' }
+@{
+    title       = $sb.ToString()
+    pid         = [int]$pid2
+    processName = if ($proc) { $proc.ProcessName } else { $null }
+    executablePath = if ($proc) { $proc.Path } else { $null }
+    x           = $rect.Left
+    y           = $rect.Top
+    width       = ($rect.Right - $rect.Left)
+    height      = ($rect.Bottom - $rect.Top)
+    state       = $state
+    hwnd        = [string]$hwnd
+} | ConvertTo-Json`;
+  return tryJson(psRun(script, 12000));
+}
+
+async function windowHierarchy() {
+  const script = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
+public class WinHier {
+    public delegate bool EnumProc(IntPtr hwnd, IntPtr lp);
+    [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc lpEnumFunc, IntPtr lParam);
+    [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr parent, EnumProc callback, IntPtr lp);
+    [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+    [DllImport("user32.dll")] public static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint p);
+    [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr h);
+}
+'@ -ErrorAction SilentlyContinue
+$roots = @()
+$cb = [WinHier+EnumProc]{
+    param($hwnd, $lp)
+    if ([WinHier]::IsWindowVisible($hwnd)) {
+        $sb = New-Object System.Text.StringBuilder(512)
+        [WinHier]::GetWindowText($hwnd, $sb, 512) | Out-Null
+        $cls = New-Object System.Text.StringBuilder(256)
+        [WinHier]::GetClassName($hwnd, $cls, 256) | Out-Null
+        $pid2 = [uint32]0
+        [WinHier]::GetWindowThreadProcessId($hwnd, [ref]$pid2) | Out-Null
+        $t = $sb.ToString()
+        if ($t -ne '') {
+            $script:roots += @{ hwnd=[string]$hwnd; title=$t; class=$cls.ToString(); pid=[int]$pid2 }
+        }
+    }
+    return $true
+}
+[WinHier]::EnumWindows($cb, [IntPtr]::Zero) | Out-Null
+$roots | Select-Object -First 80 | ConvertTo-Json -Depth 2 -Compress`;
+  return tryJson(psRun(script, 20000));
+}
+
 function getExecutionProfile() {
   return {
     ...executionProfile,
@@ -1159,6 +1369,49 @@ const TOOLS = [
         limit: { type: 'number', description: 'Max connection rows sampled (default 200, max 1000)' },
       },
     },
+  },
+  // ── Window Intelligence ────────────────────────────────────────────────────
+  {
+    name: 'list_windows_detailed',
+    description: 'List all visible top-level windows with full metadata: title, PID, class, position, size, and state (normal/minimized/maximized).',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'move_resize_window',
+    description: 'Move and/or resize a window by title. Omit any of x/y/width/height to keep that dimension unchanged.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title:  { type: 'string', description: 'Substring of the window title to match' },
+        x:      { type: 'number', description: 'New left edge (pixels)' },
+        y:      { type: 'number', description: 'New top edge (pixels)' },
+        width:  { type: 'number', description: 'New window width (pixels)' },
+        height: { type: 'number', description: 'New window height (pixels)' },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'minimize_maximize_window',
+    description: 'Minimize, maximize, or restore a window by title.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title:  { type: 'string', description: 'Substring of the window title to match' },
+        action: { type: 'string', enum: ['minimize', 'maximize', 'restore'], description: 'Action to perform (default: minimize)' },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'get_focused_app_state',
+    description: 'Return full context for the currently focused window: title, PID, process name, executable path, position, size, and window state.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'window_hierarchy',
+    description: 'Enumerate all visible top-level windows with their hwnd, title, Win32 class name, and PID (up to 80 entries).',
+    inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'kill_process',
@@ -1567,6 +1820,11 @@ async function handleTool(name, args) {
     case 'wait_for_process_state': return waitForProcessState(args);
     case 'process_tree':        return processTree(args);
     case 'process_network_map': return processNetworkMap(args);
+    case 'list_windows_detailed':   return listWindowsDetailed();
+    case 'move_resize_window':      return moveResizeWindow(args);
+    case 'minimize_maximize_window':return minimizeMaximizeWindow(args);
+    case 'get_focused_app_state':   return getFocusedAppState();
+    case 'window_hierarchy':        return windowHierarchy();
     case 'kill_process':        return killProcess(args);
     case 'get_open_ports':      return getOpenPorts();
     case 'search_files':        return searchFiles(args);

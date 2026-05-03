@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-05-03T16:29:54.321Z",
+  "runStamp": "2026-05-03_122857",
+  "includeDangerous": false,
+  "testFile": "group-i-window-intel/test.js",
+  "id": "group-i-window-intel",
+  "status": "pass",
+  "durationMs": 6714,
+  "notes": "Window intelligence tools returned expected structures",
+  "details": {
+    "visibleWindows": 6,
+    "focusedTitle": "Extract /apa/ app into s. - Claude2 - Visual Studio Code",
+    "hierarchyNodes": 14
+  }
+}

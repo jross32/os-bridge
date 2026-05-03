@@ -1,14 +1,14 @@
 {
-  "timestamp": "2026-05-03T15:07:06.458Z",
-  "runStamp": "2026-05-03_110632",
+  "timestamp": "2026-05-03T16:29:31.877Z",
+  "runStamp": "2026-05-03_122857",
   "includeDangerous": false,
   "testFile": "group-f-visual/test-screenshot-window/test.js",
   "id": "group-f-visual/test-screenshot-window",
   "status": "pass",
-  "durationMs": 7226,
+  "durationMs": 7707,
   "notes": "screenshot_window: fallback + real window capture both pass",
   "details": {
-    "windowCaptured": "Copilot Server Connection Methods - Goog",
-    "imageSizeKB": 156
+    "windowCaptured": "Web Scraper MCP - Tool Reference - Googl",
+    "imageSizeKB": 129
   }
 }

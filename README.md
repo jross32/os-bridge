@@ -49,6 +49,14 @@ npm start
 npm test
 ```
 
+## Verify Before Commit
+
+```powershell
+npm run verify
+```
+
+Use `RELEASE_CHECKLIST.md` for the full release flow.
+
 ## Git Setup Info
 
 If needed, configure git identity before committing:
