@@ -2129,7 +2129,104 @@ const TOOLS = [
   },
 ];
 
-// ── Tool dispatcher ───────────────────────────────────────────────────────────
+// ── Prompts ───────────────────────────────────────────────────────────────────
+const PROMPTS = [
+  {
+    name: 'automate_app',
+    description: 'Generate a step-by-step automation plan for a Windows application.',
+    arguments: [
+      { name: 'appName', description: 'Name of the application to automate', required: true },
+      { name: 'goal',    description: 'What you want to accomplish',          required: true },
+    ],
+  },
+  {
+    name: 'find_memory_hogs',
+    description: 'Diagnose high memory usage — lists top processes and suggests next steps.',
+    arguments: [],
+  },
+  {
+    name: 'monitor_file',
+    description: 'Set up a file monitoring workflow — polls size/mtime and alerts on change.',
+    arguments: [
+      { name: 'filePath',      description: 'Absolute path to the file to watch', required: true },
+      { name: 'intervalSecs',  description: 'Poll interval in seconds (default 10)', required: false },
+    ],
+  },
+  {
+    name: 'debug_slow_startup',
+    description: 'Investigate slow Windows startup — checks startup items, services, and resource usage.',
+    arguments: [],
+  },
+  {
+    name: 'capture_window_state',
+    description: 'Capture a snapshot of all open windows (title, size, position, PID) for later restore.',
+    arguments: [],
+  },
+];
+
+function getPromptMessages(name, args) {
+  switch (name) {
+    case 'automate_app': {
+      const app  = (args && args.appName) || 'the application';
+      const goal = (args && args.goal)    || 'complete the task';
+      return [{ role: 'user', content: { type: 'text', text:
+        `I need to automate "${app}" to: ${goal}\n\n` +
+        `Please help me by:\n` +
+        `1. Using list_windows or list_windows_detailed to check if "${app}" is already open\n` +
+        `2. Using focus_window or get_focused_app_state to bring it into focus\n` +
+        `3. Breaking the goal into discrete UI steps (click, type_text, press_key)\n` +
+        `4. Confirming each step with take_screenshot before proceeding\n` +
+        `5. Suggesting error recovery if a step fails`
+      } }];
+    }
+    case 'find_memory_hogs': {
+      return [{ role: 'user', content: { type: 'text', text:
+        `Diagnose high memory usage on this Windows machine.\n\n` +
+        `Steps:\n` +
+        `1. Call get_processes with sortBy="memoryMB" and limit=10\n` +
+        `2. Call process_resource_hotspots to identify CPU+memory hotspots\n` +
+        `3. For each top process, call process_tree with its PID to see child processes\n` +
+        `4. Report: which processes are consuming the most memory, whether any are unexpected, and recommended actions (kill, restart service, etc.)`
+      } }];
+    }
+    case 'monitor_file': {
+      const fp      = (args && args.filePath)     || '<file>';
+      const secs    = parseInt((args && args.intervalSecs) || '10') || 10;
+      return [{ role: 'user', content: { type: 'text', text:
+        `Monitor the file: ${fp}\nPoll every ${secs} seconds.\n\n` +
+        `Workflow:\n` +
+        `1. Call watch_file_changes with filePath="${fp}" to get baseline (sizeBytes, mtimeMs)\n` +
+        `2. After ${secs}s, call watch_file_changes again and compare mtimeMs\n` +
+        `3. If changed: call read_file_lines with the last 20 lines to show what changed\n` +
+        `4. Report: whether the file changed, new size, new mtime, and a diff if content changed`
+      } }];
+    }
+    case 'debug_slow_startup': {
+      return [{ role: 'user', content: { type: 'text', text:
+        `Investigate why Windows is starting up slowly.\n\n` +
+        `Steps:\n` +
+        `1. Call get_startup_items to list all registry Run-key startup programs\n` +
+        `2. Call get_installed_software with filter="update|helper|agent|launcher" (limit=20) to find background agents\n` +
+        `3. Call check_service_status for common slow-start services: "SysMain","WSearch","wuauserv","DiagTrack"\n` +
+        `4. Call get_event_log_entries with logName="System", level="Error", limit=10 for boot-time errors\n` +
+        `5. Summarize: which startup items are unnecessary, which services are slow/erroring, and recommended disables`
+      } }];
+    }
+    case 'capture_window_state': {
+      return [{ role: 'user', content: { type: 'text', text:
+        `Capture a full snapshot of the current window layout.\n\n` +
+        `Steps:\n` +
+        `1. Call list_windows_detailed to get all visible windows with title/pid/x/y/width/height/state\n` +
+        `2. Call window_hierarchy to get the parent-child relationships\n` +
+        `3. Format the results as a table: PID | Title | Position (x,y) | Size (w×h) | State\n` +
+        `4. Save the JSON to a file using write_file so it can be used to restore the layout later`
+      } }];
+    }
+    default:
+      throw new Error(`Unknown prompt: ${name}`);
+  }
+}
+
 async function handleTool(name, args) {
   switch (name) {
     case 'get_system_info':     return getSystemInfo();
@@ -2236,7 +2333,7 @@ rl.on('line', async (rawLine) => {
       case 'initialize':
         result = {
           protocolVersion: '2024-11-05',
-          capabilities: { tools: { listChanged: false } },
+          capabilities: { tools: { listChanged: false }, prompts: { listChanged: false } },
           serverInfo: { name: 'os-bridge', version: '1.0.0' },
         };
         break;
@@ -2244,6 +2341,23 @@ rl.on('line', async (rawLine) => {
       case 'tools/list':
         result = { tools: TOOLS };
         break;
+
+      case 'prompts/list':
+        result = { prompts: PROMPTS };
+        break;
+
+      case 'prompts/get': {
+        const promptName = params && params.name;
+        const promptArgs = (params && params.arguments) || {};
+        try {
+          const messages = getPromptMessages(promptName, promptArgs);
+          result = { description: (PROMPTS.find(p => p.name === promptName) || {}).description || '', messages };
+        } catch (err) {
+          send({ jsonrpc: '2.0', id, error: { code: -32602, message: err.message } });
+          return;
+        }
+        break;
+      }
 
       case 'tools/call': {
         const toolName = params && params.name;

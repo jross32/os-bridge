@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-05-03T16:36:52.381Z",
-  "runStamp": "2026-05-03_123612",
+  "timestamp": "2026-05-03T16:40:34.613Z",
+  "runStamp": "2026-05-03_123956",
   "includeDangerous": false,
   "testFile": "group-g-shell-sessions/test-shell-session-lifecycle/test.js",
   "id": "group-g-shell-sessions/test-shell-session-lifecycle",
   "status": "pass",
-  "durationMs": 1311,
+  "durationMs": 1212,
   "notes": "shell_open / shell_send / shell_read / shell_list_sessions / shell_close all pass",
   "details": {
-    "sessionId": "a072d1e7…"
+    "sessionId": "a97fc8ee…"
   }
 }

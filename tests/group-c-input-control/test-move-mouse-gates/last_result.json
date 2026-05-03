@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-05-03T16:36:35.640Z",
-  "runStamp": "2026-05-03_123612",
+  "timestamp": "2026-05-03T16:40:17.557Z",
+  "runStamp": "2026-05-03_123956",
   "includeDangerous": false,
   "testFile": "group-c-input-control/test-move-mouse-gates/test.js",
   "id": "group-c-input-control/test-move-mouse-gates",
