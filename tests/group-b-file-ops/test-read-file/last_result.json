@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-05-03T16:33:09.741Z",
-  "runStamp": "2026-05-03_123247",
+  "timestamp": "2026-05-03T16:36:35.617Z",
+  "runStamp": "2026-05-03_123612",
   "includeDangerous": false,
   "testFile": "group-b-file-ops/test-read-file/test.js",
   "id": "group-b-file-ops/test-read-file",
@@ -8,6 +8,6 @@
   "durationMs": 4,
   "notes": "read_file returned correct content",
   "details": {
-    "path": "C:\\Users\\justi\\AppData\\Local\\Temp\\os-bridge-read-test-1777825989738.txt"
+    "path": "C:\\Users\\justi\\AppData\\Local\\Temp\\os-bridge-read-test-1777826195613.txt"
   }
 }

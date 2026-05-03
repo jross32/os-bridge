@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T16:33:09.685Z",
-  "runStamp": "2026-05-03_123247",
+  "timestamp": "2026-05-03T16:36:35.566Z",
+  "runStamp": "2026-05-03_123612",
   "includeDangerous": false,
   "testFile": "group-b-file-ops/test-file-ops-scenario/test.js",
   "id": "group-b-file-ops/test-file-ops-scenario",
   "status": "pass",
-  "durationMs": 170,
+  "durationMs": 162,
   "notes": "file-ops-demo: scenario valid, catalog updated, MCP round-trip write→read→list all pass",
   "details": {
     "scenarioSteps": 3,

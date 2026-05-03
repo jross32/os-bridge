@@ -1354,6 +1354,87 @@ function watchFileChanges(args) {
   };
 }
 
+// ── System Diagnostics ────────────────────────────────────────────────────
+
+async function checkServiceStatus(args) {
+  if (!args.name) throw new Error('name required');
+  const name = String(args.name).replace(/'/g, "''");
+  const script = `
+$svc = Get-Service -Name '${name}' -ErrorAction SilentlyContinue
+if (-not $svc) { Write-Output (ConvertTo-Json @{ found=$false; name='${name}' }) } else {
+  Write-Output (ConvertTo-Json @{
+    found=$true; name=$svc.Name; displayName=$svc.DisplayName
+    status=$svc.Status.ToString(); startType=$svc.StartType.ToString()
+  })
+}`;
+  const raw = await psRun(script, 10000);
+  return tryJson(raw.trim()) || { found: false, name: args.name, raw };
+}
+
+async function getInstalledSoftware(args) {
+  const filter  = args.filter ? String(args.filter).replace(/'/g, "''") : '';
+  const limitN  = Math.min(parseInt(args.limit) || 100, 500);
+  const script = `
+$paths = @(
+  'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'
+  'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'
+)
+$apps = Get-ItemProperty $paths -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName } |
+  ${filter ? `Where-Object { $_.DisplayName -match '${filter}' } |` : ''}
+  Select-Object DisplayName, DisplayVersion, Publisher, InstallDate |
+  Sort-Object DisplayName |
+  Select-Object -First ${limitN}
+Write-Output (ConvertTo-Json $apps -Compress)`;
+  const raw = await psRun(script, 15000);
+  const items = tryJson(raw.trim());
+  const list = Array.isArray(items) ? items : (items ? [items] : []);
+  return { count: list.length, filter: filter || null, software: list };
+}
+
+async function getStartupItems() {
+  const script = `
+$items = @()
+$runKeys = @(
+  'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run'
+  'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run'
+  'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Run'
+)
+foreach ($key in $runKeys) {
+  $props = Get-ItemProperty $key -ErrorAction SilentlyContinue
+  if ($props) {
+    $props.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' } | ForEach-Object {
+      $items += @{ name=$_.Name; command=$_.Value; hive=$key }
+    }
+  }
+}
+Write-Output (ConvertTo-Json $items -Compress)`;
+  const raw = await psRun(script, 10000);
+  const items = tryJson(raw.trim());
+  const list = Array.isArray(items) ? items : (items ? [items] : []);
+  return { count: list.length, items: list };
+}
+
+async function getEventLogEntries(args) {
+  const logName  = args.logName ? String(args.logName).replace(/'/g, "''") : 'Application';
+  const limitN   = Math.min(parseInt(args.limit) || 20, 200);
+  const level    = args.level ? String(args.level) : null; // Error, Warning, Information
+  const levelFilter = level ? `| Where-Object { $_.EntryType -eq '${level}' }` : '';
+  const script = `
+$entries = Get-EventLog -LogName '${logName}' -Newest 200 -ErrorAction SilentlyContinue ${levelFilter} |
+  Select-Object -First ${limitN} |
+  ForEach-Object {
+    @{ timeGenerated=$_.TimeGenerated.ToString('o'); entryType=$_.EntryType.ToString()
+       source=$_.Source; eventId=$_.EventID; message=($_.Message -replace '\\r|\\n',' ').Substring(0, [Math]::Min(200,$_.Message.Length)) }
+  }
+if (-not $entries) { $entries = @() }
+Write-Output (ConvertTo-Json @($entries) -Compress)`;
+  const raw = await psRun(script, 15000);
+  const entries = tryJson(raw.trim());
+  const list = Array.isArray(entries) ? entries : (entries ? [entries] : []);
+  return { logName, level: level || 'all', count: list.length, entries: list };
+}
+
 function getExecutionProfile() {
   return {
     ...executionProfile,
@@ -1644,7 +1725,47 @@ const TOOLS = [
     description: 'Get the pixel dimensions of all connected monitors.',
     inputSchema: { type: 'object', properties: {} },
   },
-  // ── Clipboard & notifications ─────────────────────────────────────────────
+  // ── System Diagnostics ────────────────────────────────────────────────────
+  {
+    name: 'check_service_status',
+    description: 'Query the status of a Windows service by name. Returns status, displayName, and startType.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Service short name, e.g. "wuauserv" or "Spooler"' },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'get_installed_software',
+    description: 'List installed programs from the Windows registry uninstall keys.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filter: { type: 'string', description: 'Optional regex filter on DisplayName' },
+        limit:  { type: 'number', description: 'Max results (default 100, max 500)' },
+      },
+    },
+  },
+  {
+    name: 'get_startup_items',
+    description: 'List programs configured to run at Windows startup from registry Run keys.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_event_log_entries',
+    description: 'Read recent Windows Event Log entries from Application or System log.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        logName: { type: 'string', description: 'Log name: Application (default), System, Security' },
+        level:   { type: 'string', description: 'Filter by level: Error, Warning, Information' },
+        limit:   { type: 'number', description: 'Max entries (default 20, max 200)' },
+      },
+    },
+  },
+
   {
     name: 'read_clipboard',
     description: 'Read the current Windows clipboard contents as text.',
@@ -2030,6 +2151,10 @@ async function handleTool(name, args) {
     case 'diff_files':          return diffFiles(args);
     case 'hash_file':           return hashFile(args);
     case 'watch_file_changes':  return watchFileChanges(args);
+    case 'check_service_status':     return checkServiceStatus(args);
+    case 'get_installed_software':   return getInstalledSoftware(args);
+    case 'get_startup_items':        return getStartupItems();
+    case 'get_event_log_entries':    return getEventLogEntries(args);
     case 'get_screen_size':     return getScreenSize();
     case 'read_clipboard':      return readClipboard();
     case 'write_clipboard':     return writeClipboard(args);
