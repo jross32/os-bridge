@@ -65,3 +65,4 @@ This repository includes `.gitmessage.txt` to standardize commit notes and versi
 
 - This server is designed to be client-agnostic (works with Claude, Copilot, Codex, or other MCP clients).
 - Keep tool behavior generic and avoid app-specific assumptions.
+- For adding/updating tools, follow `MCP_TOOL_STANDARDS.md`.
