@@ -296,6 +296,192 @@ $procs | Select-Object -First ${limit} | ConvertTo-Json -Compress`;
   return tryJson(psRun(script));
 }
 
+async function processResourceHotspots(args) {
+  const topN = Math.max(1, Math.min(100, parseInt(args.topN) || 10));
+  const script = `
+$procs = Get-Process | Select-Object Id, ProcessName,
+  @{N='CpuS'; E={if($_.CPU -ne $null){[math]::Round($_.CPU, 2)}else{0}}},
+  @{N='MemMB'; E={[math]::Round($_.WorkingSet64 / 1MB, 1)}}
+
+$topCpu = $procs | Sort-Object CpuS -Descending | Select-Object -First ${topN}
+$topMem = $procs | Sort-Object MemMB -Descending | Select-Object -First ${topN}
+
+@{
+  topCpu    = @($topCpu)
+  topMemory = @($topMem)
+  sampledAt = (Get-Date).ToString('o')
+} | ConvertTo-Json -Depth 6 -Compress`;
+  return tryJson(psRun(script, 20000));
+}
+
+async function waitForProcessState(args) {
+  if (!args.pid && !args.name) throw new Error('pid or name required');
+
+  const desiredState = (args.desiredState || 'running').toLowerCase();
+  if (desiredState !== 'running' && desiredState !== 'stopped') {
+    throw new Error('desiredState must be running or stopped');
+  }
+
+  const timeoutMs = Math.max(500, Math.min(120000, parseInt(args.timeoutMs) || 10000));
+  const pollMs = Math.max(50, Math.min(5000, parseInt(args.pollMs) || 250));
+  const start = Date.now();
+
+  const escapedName = args.name ? String(args.name).replace(/'/g, "''") : null;
+  const pid = args.pid ? parseInt(args.pid) : null;
+
+  while ((Date.now() - start) < timeoutMs) {
+    const existsScript = pid
+      ? `@((Get-Process -Id ${pid} -ErrorAction SilentlyContinue)).Count | ConvertTo-Json -Compress`
+      : `@((Get-Process -Name '${escapedName}' -ErrorAction SilentlyContinue)).Count | ConvertTo-Json -Compress`;
+
+    const count = Number(tryJson(psRun(existsScript, 10000))) || 0;
+    const isRunning = count > 0;
+    const matched = desiredState === 'running' ? isRunning : !isRunning;
+
+    if (matched) {
+      return {
+        matched: true,
+        desiredState,
+        observedState: isRunning ? 'running' : 'stopped',
+        elapsedMs: Date.now() - start,
+        criteria: pid ? { pid } : { name: args.name },
+      };
+    }
+
+    await sleep(pollMs);
+  }
+
+  return {
+    matched: false,
+    desiredState,
+    timedOut: true,
+    elapsedMs: Date.now() - start,
+    criteria: pid ? { pid } : { name: args.name },
+  };
+}
+
+async function processTree(args) {
+  if (!args.pid && !args.processName) throw new Error('pid or processName required');
+
+  const maxNodes = Math.max(1, Math.min(500, parseInt(args.maxNodes) || 200));
+  const script = `
+$procs = Get-CimInstance Win32_Process | Select-Object ProcessId, ParentProcessId, Name, CommandLine
+$procs | ConvertTo-Json -Depth 6 -Compress`;
+
+  const raw = tryJson(psRun(script, 25000));
+  const rows = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+
+  const nodesByPid = new Map();
+  for (const row of rows) {
+    const pid = Number(row.ProcessId);
+    if (!Number.isFinite(pid)) continue;
+    nodesByPid.set(pid, {
+      pid,
+      parentPid: Number(row.ParentProcessId) || 0,
+      processName: row.Name || '',
+      commandLine: row.CommandLine || '',
+    });
+  }
+
+  let root = null;
+  if (args.pid) {
+    root = nodesByPid.get(parseInt(args.pid)) || null;
+  } else {
+    const needle = String(args.processName).toLowerCase();
+    for (const node of nodesByPid.values()) {
+      if ((node.processName || '').toLowerCase().includes(needle)) {
+        root = node;
+        break;
+      }
+    }
+  }
+
+  if (!root) {
+    return {
+      rootPid: null,
+      rootName: null,
+      totalNodes: 0,
+      nodes: [],
+      edges: [],
+      warning: 'No matching root process found',
+    };
+  }
+
+  const childrenMap = new Map();
+  for (const node of nodesByPid.values()) {
+    const parent = node.parentPid;
+    if (!childrenMap.has(parent)) childrenMap.set(parent, []);
+    childrenMap.get(parent).push(node.pid);
+  }
+
+  const queue = [root.pid];
+  const visited = new Set();
+  const nodes = [];
+  const edges = [];
+
+  while (queue.length && nodes.length < maxNodes) {
+    const pid = queue.shift();
+    if (visited.has(pid)) continue;
+    visited.add(pid);
+
+    const node = nodesByPid.get(pid);
+    if (!node) continue;
+    nodes.push(node);
+
+    const children = childrenMap.get(pid) || [];
+    for (const childPid of children) {
+      edges.push({ from: pid, to: childPid });
+      if (!visited.has(childPid)) queue.push(childPid);
+      if (nodes.length + queue.length >= maxNodes) break;
+    }
+  }
+
+  return {
+    rootPid: root.pid,
+    rootName: root.processName,
+    totalNodes: nodes.length,
+    totalEdges: edges.length,
+    maxNodes,
+    nodes,
+    edges,
+  };
+}
+
+async function processNetworkMap(args) {
+  const limit = Math.max(1, Math.min(1000, parseInt(args.limit) || 200));
+  const script = `
+$conns = Get-NetTCPConnection -ErrorAction SilentlyContinue |
+  Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort, State, OwningProcess |
+  Select-Object -First ${limit}
+
+$procMap = @{}
+Get-Process | ForEach-Object { $procMap[[int]$_.Id] = $_.ProcessName }
+
+$summary = $conns | Group-Object OwningProcess | ForEach-Object {
+  $pid = [int]$_.Name
+  $rows = $_.Group
+  [PSCustomObject]@{
+    pid         = $pid
+    processName = $procMap[$pid]
+    connections = $rows.Count
+    listening   = @($rows | Where-Object { $_.State -eq 'Listen' }).Count
+    established = @($rows | Where-Object { $_.State -eq 'Established' }).Count
+  }
+} | Sort-Object connections -Descending
+
+@{
+  summary     = @($summary)
+  connections = @($conns)
+} | ConvertTo-Json -Depth 8 -Compress`;
+
+  const out = tryJson(psRun(script, 25000));
+  return {
+    summary: Array.isArray(out.summary) ? out.summary : (out.summary ? [out.summary] : []),
+    connections: Array.isArray(out.connections) ? out.connections : (out.connections ? [out.connections] : []),
+    limit,
+  };
+}
+
 async function killProcess(args) {
   if (!args.pid && !args.name) throw new Error('pid or name required');
   const script = args.pid
@@ -929,6 +1115,52 @@ const TOOLS = [
     },
   },
   {
+    name: 'process_resource_hotspots',
+    description: 'Return top CPU and memory process hotspots for quick triage.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        topN: { type: 'number', description: 'Rows per ranking bucket (default 10, max 100)' },
+      },
+    },
+  },
+  {
+    name: 'wait_for_process_state',
+    description: 'Wait until a process becomes running or stopped by PID or process name.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pid: { type: 'number', description: 'Target process id' },
+        name: { type: 'string', description: 'Target process name (e.g. node, chrome)' },
+        desiredState: { type: 'string', enum: ['running', 'stopped'], description: 'Target state (default running)' },
+        timeoutMs: { type: 'number', description: 'Max wait time in milliseconds (default 10000)' },
+        pollMs: { type: 'number', description: 'Polling interval in milliseconds (default 250)' },
+      },
+    },
+  },
+  {
+    name: 'process_tree',
+    description: 'Build a process tree snapshot rooted by PID or processName.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pid: { type: 'number', description: 'Root process id' },
+        processName: { type: 'string', description: 'Root process name substring' },
+        maxNodes: { type: 'number', description: 'Max nodes to include (default 200, max 500)' },
+      },
+    },
+  },
+  {
+    name: 'process_network_map',
+    description: 'Map active TCP connections to owning processes with aggregate counts.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Max connection rows sampled (default 200, max 1000)' },
+      },
+    },
+  },
+  {
     name: 'kill_process',
     description: 'Kill a process by PID or by name.',
     inputSchema: {
@@ -1331,6 +1563,10 @@ async function handleTool(name, args) {
   switch (name) {
     case 'get_system_info':     return getSystemInfo();
     case 'get_processes':       return getProcesses(args);
+    case 'process_resource_hotspots': return processResourceHotspots(args);
+    case 'wait_for_process_state': return waitForProcessState(args);
+    case 'process_tree':        return processTree(args);
+    case 'process_network_map': return processNetworkMap(args);
     case 'kill_process':        return killProcess(args);
     case 'get_open_ports':      return getOpenPorts();
     case 'search_files':        return searchFiles(args);
