@@ -1,0 +1,32 @@
+{
+  "runId": "2026-05-02_225908_smoke-basic",
+  "scenarioId": "smoke-basic",
+  "profileId": "default-quiet",
+  "effectiveMode": "quiet",
+  "visibleOverride": false,
+  "startedAt": "2026-05-03T02:59:08.656Z",
+  "finishedAt": "2026-05-03T02:59:19.037Z",
+  "totalSteps": 3,
+  "skippedFromCheckpoint": 1,
+  "executedSteps": 2,
+  "passed": 2,
+  "failed": 0,
+  "steps": [
+    {
+      "index": 1,
+      "id": "processes",
+      "tool": "get_processes",
+      "status": "pass",
+      "reason": "Expectation passed",
+      "completedAt": "2026-05-03T02:59:18.982Z"
+    },
+    {
+      "index": 2,
+      "id": "control-state",
+      "tool": "get_control_state",
+      "status": "pass",
+      "reason": "Expectation passed",
+      "completedAt": "2026-05-03T02:59:18.994Z"
+    }
+  ]
+}

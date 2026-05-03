@@ -1,0 +1,24 @@
+UX Runner Summary
+Run ID: 2026-05-03_043406_agent-mode-parity
+Scenario: agent-mode-parity
+Profile: agent-mode-visible
+Effective mode: visible
+Started: 2026-05-03T08:34:06.225Z
+Finished: 2026-05-03T08:34:29.070Z
+Total steps: 5
+Skipped from checkpoint: 0
+Executed this run: 5
+Passed: 5
+Failed: 0
+
+Step Results:
+- [PASS] 1. announce-start (send_notification)
+  reason: Expectation passed
+- [PASS] 2. system-info (get_system_info)
+  reason: Expectation passed
+- [PASS] 3. processes (get_processes)
+  reason: Expectation passed
+- [PASS] 4. control-state (get_control_state)
+  reason: Expectation passed
+- [PASS] 5. announce-complete (send_notification)
+  reason: Expectation passed

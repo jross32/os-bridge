@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UX Runner Profile",
+  "type": "object",
+  "required": ["id", "executionProfile"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "executionProfile": {
+      "type": "object",
+      "properties": {
+        "mode": { "type": "string", "enum": ["quiet", "visible"] },
+        "announceActions": { "type": "boolean" },
+        "preActionDelayMs": { "type": "number", "minimum": 0, "maximum": 5000 },
+        "notificationTitle": { "type": "string" }
+      },
+      "required": ["mode"]
+    },
+    "runner": {
+      "type": "object",
+      "properties": {
+        "normalizeControlState": { "type": "boolean" },
+        "requestControlBeforeRun": { "type": "boolean" },
+        "releaseControlAfterRun": { "type": "boolean" },
+        "captureAfterEachStep": { "type": "boolean" },
+        "enableScreenshotDiff": { "type": "boolean" },
+        "riskPolicy": {
+          "type": "object",
+          "properties": {
+            "autoApproveLow": { "type": "boolean" },
+            "autoApproveMedium": { "type": "boolean" },
+            "requireApprovalForHigh": { "type": "boolean" },
+            "requireApprovalForCritical": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "index": 0,
+  "id": "system-info",
+  "tool": "get_system_info",
+  "args": {},
+  "risk": "low",
+  "gateReason": "No explicit confirmation required",
+  "startedAt": "2026-05-03T02:59:22.817Z"
+}

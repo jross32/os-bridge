@@ -1,0 +1,27 @@
+{
+  "runId": "2026-05-03_043406_agent-mode-parity",
+  "startedAt": "2026-05-03T08:34:06.225Z",
+  "scenarioId": "agent-mode-parity",
+  "scenarioTitle": "Agent-mode parity smoke for visibility, control state, and checkpoint-safe orchestration",
+  "profileId": "agent-mode-visible",
+  "effectiveMode": "visible",
+  "visibleOverride": true,
+  "startIndex": 0,
+  "toolsDiscovered": 31,
+  "requiredTools": [
+    "set_execution_profile",
+    "send_notification",
+    "get_system_info",
+    "get_processes",
+    "get_control_state",
+    "take_screenshot"
+  ],
+  "tags": [
+    "agent-mode",
+    "parity",
+    "visual",
+    "regression",
+    "safe"
+  ],
+  "resumedFromCheckpoint": false
+}

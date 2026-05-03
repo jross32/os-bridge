@@ -1,0 +1,19 @@
+{
+  "id": "default-quiet",
+  "executionProfile": {
+    "mode": "quiet"
+  },
+  "runner": {
+    "normalizeControlState": true,
+    "requestControlBeforeRun": true,
+    "releaseControlAfterRun": true,
+    "captureAfterEachStep": false,
+    "enableScreenshotDiff": false,
+    "riskPolicy": {
+      "autoApproveLow": true,
+      "autoApproveMedium": true,
+      "requireApprovalForHigh": true,
+      "requireApprovalForCritical": true
+    }
+  }
+}

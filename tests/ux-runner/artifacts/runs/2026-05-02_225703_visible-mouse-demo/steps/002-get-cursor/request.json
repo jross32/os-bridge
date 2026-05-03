@@ -1,0 +1,9 @@
+{
+  "index": 1,
+  "id": "get-cursor",
+  "tool": "get_mouse_position",
+  "args": {},
+  "risk": "low",
+  "gateReason": "No explicit confirmation required",
+  "startedAt": "2026-05-03T02:57:05.627Z"
+}

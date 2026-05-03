@@ -1,0 +1,21 @@
+{
+  "name": "os-bridge",
+  "version": "0.0.0",
+  "description": "OS-level MCP server — system monitor, mouse/keyboard control, window management, file search",
+  "main": "mcp-server.js",
+  "scripts": {
+    "start": "node mcp-server.js",
+    "test": "node tests/run-all.js",
+    "test:dangerous": "node tests/run-all.js --dangerous",
+    "demo:visible": "node tests/run-visible-demo.js",
+    "ux:run": "node tests/ux-runner/run-ux.js",
+    "ux:smoke": "node tests/ux-runner/run-ux.js --scenario smoke-basic",
+    "ux:visible": "node tests/ux-runner/run-ux.js --scenario visible-mouse-demo --visible",
+    "ux:agent-mode": "node tests/ux-runner/run-ux.js --scenario agent-mode-parity --profile agent-mode-visible --visible",
+    "ux:catalog": "node tests/ux-runner/refresh-catalog.js",
+    "ux:interrupt-demo": "node tests/ux-runner/run-ux.js --scenario smoke-basic --stop-after 1",
+    "ux:resume-demo": "node tests/ux-runner/run-ux.js --scenario smoke-basic --resume"
+  },
+  "keywords": ["mcp", "os", "automation", "mouse", "keyboard", "windows"],
+  "license": "MIT"
+}

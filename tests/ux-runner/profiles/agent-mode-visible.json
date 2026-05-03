@@ -1,0 +1,22 @@
+{
+  "id": "agent-mode-visible",
+  "executionProfile": {
+    "mode": "visible",
+    "announceActions": true,
+    "preActionDelayMs": 1000,
+    "notificationTitle": "os-bridge agent mode"
+  },
+  "runner": {
+    "normalizeControlState": true,
+    "requestControlBeforeRun": true,
+    "releaseControlAfterRun": true,
+    "captureAfterEachStep": true,
+    "enableScreenshotDiff": true,
+    "riskPolicy": {
+      "autoApproveLow": true,
+      "autoApproveMedium": true,
+      "requireApprovalForHigh": true,
+      "requireApprovalForCritical": true
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-05-03T15:06:53.908Z",
+  "runStamp": "2026-05-03_110632",
+  "includeDangerous": false,
+  "testFile": "group-b-file-ops/test-get-env-vars/test.js",
+  "id": "group-b-file-ops/test-get-env-vars",
+  "status": "pass",
+  "durationMs": 4,
+  "notes": "get_environment_vars: all-mode, prefix-filter, and named-lookup all work",
+  "details": {
+    "totalVarCount": 93
+  }
+}

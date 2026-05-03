@@ -1,0 +1,15 @@
+{
+  "runId": "2026-05-02_223957_visible-mouse-demo",
+  "startedAt": "2026-05-03T02:39:57.432Z",
+  "scenarioId": "visible-mouse-demo",
+  "scenarioTitle": "Visible mode demo with announcements and reversible mouse motion",
+  "profileId": "default-quiet",
+  "startIndex": 0,
+  "toolsDiscovered": 31,
+  "requiredTools": [
+    "set_execution_profile",
+    "send_notification",
+    "get_mouse_position",
+    "move_mouse"
+  ]
+}

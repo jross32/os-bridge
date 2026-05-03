@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UX Runner Checkpoint State",
+  "type": "object",
+  "required": ["scenarioId", "runId", "nextStepIndex", "updatedAt"],
+  "properties": {
+    "scenarioId": { "type": "string" },
+    "runId": { "type": "string" },
+    "nextStepIndex": { "type": "number", "minimum": 0 },
+    "updatedAt": { "type": "string" },
+    "completed": { "type": "boolean" },
+    "lastError": { "type": "string" }
+  }
+}

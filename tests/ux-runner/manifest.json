@@ -1,0 +1,25 @@
+{
+  "name": "ux-runner",
+  "version": "1.0.0",
+  "description": "Schema-first UX refinement runner for os-bridge",
+  "folders": {
+    "lib": "runtime and validation code",
+    "schemas": "json schemas and contracts",
+    "profiles": "execution profile defaults",
+    "scenarios": "ordered UX workflows",
+    "artifacts/runs": "timestamped run outputs",
+    "reports": "latest summarized outputs",
+    "state": "resumable checkpoints"
+  },
+  "defaults": {
+    "scenario": "smoke-basic",
+    "profile": "default-quiet"
+  },
+  "conventions": {
+    "scenarioFile": "scenarios/<scenario-id>.json",
+    "profileFile": "profiles/<profile-id>.json",
+    "runId": "YYYY-MM-DD_HHmmss_<scenario-id>",
+    "stepFolder": "artifacts/runs/<runId>/steps/<index>-<step-id>",
+    "checkpointFile": "state/<scenario-id>.checkpoint.json"
+  }
+}

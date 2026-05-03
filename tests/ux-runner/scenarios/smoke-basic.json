@@ -1,0 +1,44 @@
+{
+  "id": "smoke-basic",
+  "title": "Smoke validation for UX runner core loop",
+  "tags": ["smoke", "regression", "safe"],
+  "mode": "quiet",
+  "requiredTools": [
+    "get_system_info",
+    "get_processes",
+    "get_control_state",
+    "set_execution_profile",
+    "request_control",
+    "release_control"
+  ],
+  "captureAfterEachStep": false,
+  "steps": [
+    {
+      "id": "system-info",
+      "tool": "get_system_info",
+      "risk": "low",
+      "expect": {
+        "ok": true,
+        "jsonHasKeys": ["cpu", "memory", "hostname", "os"]
+      }
+    },
+    {
+      "id": "processes",
+      "tool": "get_processes",
+      "args": { "limit": 5, "sortBy": "memory" },
+      "risk": "low",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "id": "control-state",
+      "tool": "get_control_state",
+      "risk": "low",
+      "expect": {
+        "ok": true,
+        "jsonHasKeys": ["inputAllowed", "executionProfile"]
+      }
+    }
+  ]
+}

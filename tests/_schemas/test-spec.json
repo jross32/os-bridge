@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TEST_SPEC frontmatter contract",
+  "type": "object",
+  "properties": {
+    "toolName": { "type": "string" },
+    "category": { "type": "string" },
+    "risk": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+    "goal": { "type": "string" },
+    "expectedOutput": {
+      "type": "object",
+      "properties": {
+        "format": { "type": "string" },
+        "requiredFields": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "expect": { "type": "string", "enum": ["success", "error"] }
+        },
+        "required": ["id", "description", "expect"]
+      }
+    }
+  },
+  "required": ["toolName", "category", "risk", "goal", "cases"]
+}

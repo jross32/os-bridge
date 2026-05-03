@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-05-03T09:37:00.000Z",
+  "scenarios": [
+    {
+      "id": "agent-mode-parity",
+      "title": "Agent-mode parity smoke for visibility, control state, and checkpoint-safe orchestration",
+      "tags": [
+        "agent-mode",
+        "parity",
+        "visual",
+        "regression",
+        "safe"
+      ],
+      "mode": "visible",
+      "stepCount": 5,
+      "requiredToolCount": 6,
+      "path": "scenarios/agent-mode-parity.json"
+    },
+    {
+      "id": "file-ops-demo",
+      "title": "File operations demo: write, read back, and list directory",
+      "tags": [
+        "file-ops",
+        "smoke",
+        "safe"
+      ],
+      "mode": "quiet",
+      "stepCount": 3,
+      "requiredToolCount": 3,
+      "path": "scenarios/file-ops-demo.json"
+    },
+    {
+      "id": "smoke-basic",
+      "title": "Smoke validation for UX runner core loop",
+      "tags": [
+        "smoke",
+        "regression",
+        "safe"
+      ],
+      "mode": "quiet",
+      "stepCount": 3,
+      "requiredToolCount": 6,
+      "path": "scenarios/smoke-basic.json"
+    },
+    {
+      "id": "visible-mouse-demo",
+      "title": "Visible mode demo with announcements and reversible mouse motion",
+      "tags": [
+        "visual",
+        "demo",
+        "safe"
+      ],
+      "mode": "visible",
+      "stepCount": 2,
+      "requiredToolCount": 4,
+      "path": "scenarios/visible-mouse-demo.json"
+    }
+  ]
+}

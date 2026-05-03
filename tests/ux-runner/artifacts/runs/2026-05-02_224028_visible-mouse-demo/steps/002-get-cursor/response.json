@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "text": "{\n  \"x\": 1385,\n  \"y\": 244\n}",
+  "json": {
+    "x": 1385,
+    "y": 244
+  },
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"x\": 1385,\n  \"y\": 244\n}"
+      }
+    ],
+    "isError": false
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "id": "file-ops-demo",
+  "title": "File operations demo: write, read back, and list directory",
+  "tags": ["file-ops", "smoke", "safe"],
+  "mode": "quiet",
+  "requiredTools": [
+    "write_file",
+    "read_file",
+    "list_directory"
+  ],
+  "captureAfterEachStep": false,
+  "steps": [
+    {
+      "id": "write-demo-file",
+      "tool": "write_file",
+      "args": {
+        "filePath": "${env.TEMP}\\os-bridge-demo-${runId}.txt",
+        "content": "os-bridge file-ops-demo\nstep: write_file\n"
+      },
+      "risk": "low",
+      "expect": {
+        "ok": true,
+        "jsonHasKeys": ["written", "filePath", "sizeBytes"]
+      }
+    },
+    {
+      "id": "read-demo-file",
+      "tool": "read_file",
+      "args": {
+        "filePath": "${steps.write-demo-file.json.filePath}"
+      },
+      "risk": "low",
+      "expect": {
+        "ok": true,
+        "jsonHasKeys": ["content", "sizeBytes", "truncated"]
+      }
+    },
+    {
+      "id": "list-temp-dir",
+      "tool": "list_directory",
+      "args": {
+        "dirPath": "${env.TEMP}",
+        "filter": ".txt",
+        "maxEntries": 50
+      },
+      "risk": "low",
+      "expect": {
+        "ok": true,
+        "jsonHasKeys": ["count", "entries"]
+      }
+    }
+  ]
+}

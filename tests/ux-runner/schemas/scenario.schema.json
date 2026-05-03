@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UX Runner Scenario",
+  "type": "object",
+  "required": ["id", "title", "requiredTools", "steps"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "title": { "type": "string", "minLength": 3 },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "mode": { "type": "string", "enum": ["quiet", "visible"] },
+    "requiredTools": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "captureAfterEachStep": { "type": "boolean" },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "tool"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "tool": { "type": "string" },
+          "args": { "type": "object" },
+          "risk": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+          "requiresConfirmation": { "type": "boolean" },
+          "captureScreenshot": { "type": "boolean" },
+          "diffWithPreviousScreenshot": { "type": "boolean" },
+          "expect": {
+            "type": "object",
+            "properties": {
+              "ok": { "type": "boolean" },
+              "containsText": { "type": "string" },
+              "containsError": { "type": "string" },
+              "jsonHasKeys": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

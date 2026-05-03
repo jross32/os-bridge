@@ -1,0 +1,71 @@
+{
+  "ok": true,
+  "text": "[\n  {\n    \"Id\": 15812,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 9766.75,\n    \"MemMB\": 635.7,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 41676,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 2488.5,\n    \"MemMB\": 564.2,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 105936,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 2593.67,\n    \"MemMB\": 560.4,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 41468,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 1018.28,\n    \"MemMB\": 513.3,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 17164,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 4278.95,\n    \"MemMB\": 466.8,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 58928,\n    \"ProcessName\": \"claude\",\n    \"CpuS\": 254.64,\n    \"MemMB\": 345.9,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 86176,\n    \"ProcessName\": \"chrome\",\n    \"CpuS\": 12.95,\n    \"MemMB\": 337.4,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 90340,\n    \"ProcessName\": \"chrome\",\n    \"CpuS\": 1472.16,\n    \"MemMB\": 319,\n    \"MainWindowTitle\": \"\"\n  }\n]",
+  "json": [
+    {
+      "Id": 15812,
+      "ProcessName": "Code",
+      "CpuS": 9766.75,
+      "MemMB": 635.7,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 41676,
+      "ProcessName": "Code",
+      "CpuS": 2488.5,
+      "MemMB": 564.2,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 105936,
+      "ProcessName": "Code",
+      "CpuS": 2593.67,
+      "MemMB": 560.4,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 41468,
+      "ProcessName": "Code",
+      "CpuS": 1018.28,
+      "MemMB": 513.3,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 17164,
+      "ProcessName": "Code",
+      "CpuS": 4278.95,
+      "MemMB": 466.8,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 58928,
+      "ProcessName": "claude",
+      "CpuS": 254.64,
+      "MemMB": 345.9,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 86176,
+      "ProcessName": "chrome",
+      "CpuS": 12.95,
+      "MemMB": 337.4,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 90340,
+      "ProcessName": "chrome",
+      "CpuS": 1472.16,
+      "MemMB": 319,
+      "MainWindowTitle": ""
+    }
+  ],
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[\n  {\n    \"Id\": 15812,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 9766.75,\n    \"MemMB\": 635.7,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 41676,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 2488.5,\n    \"MemMB\": 564.2,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 105936,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 2593.67,\n    \"MemMB\": 560.4,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 41468,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 1018.28,\n    \"MemMB\": 513.3,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 17164,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 4278.95,\n    \"MemMB\": 466.8,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 58928,\n    \"ProcessName\": \"claude\",\n    \"CpuS\": 254.64,\n    \"MemMB\": 345.9,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 86176,\n    \"ProcessName\": \"chrome\",\n    \"CpuS\": 12.95,\n    \"MemMB\": 337.4,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 90340,\n    \"ProcessName\": \"chrome\",\n    \"CpuS\": 1472.16,\n    \"MemMB\": 319,\n    \"MainWindowTitle\": \"\"\n  }\n]"
+      }
+    ],
+    "isError": false
+  }
+}

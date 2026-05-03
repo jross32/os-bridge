@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "text": "{\n  \"emergencyStopped\": false,\n  \"userPaused\": false,\n  \"inputAllowed\": true,\n  \"executionProfile\": {\n    \"mode\": \"quiet\",\n    \"announceActions\": false,\n    \"preActionDelayMs\": 700,\n    \"notificationTitle\": \"os-bridge\",\n    \"humanTakeoverHint\": \"Use pause_control or emergency_stop to take over instantly.\"\n  },\n  \"hint\": \"Input tools (mouse/keyboard/window) are ready to use.\"\n}",
+  "json": {
+    "emergencyStopped": false,
+    "userPaused": false,
+    "inputAllowed": true,
+    "executionProfile": {
+      "mode": "quiet",
+      "announceActions": false,
+      "preActionDelayMs": 700,
+      "notificationTitle": "os-bridge",
+      "humanTakeoverHint": "Use pause_control or emergency_stop to take over instantly."
+    },
+    "hint": "Input tools (mouse/keyboard/window) are ready to use."
+  },
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"emergencyStopped\": false,\n  \"userPaused\": false,\n  \"inputAllowed\": true,\n  \"executionProfile\": {\n    \"mode\": \"quiet\",\n    \"announceActions\": false,\n    \"preActionDelayMs\": 700,\n    \"notificationTitle\": \"os-bridge\",\n    \"humanTakeoverHint\": \"Use pause_control or emergency_stop to take over instantly.\"\n  },\n  \"hint\": \"Input tools (mouse/keyboard/window) are ready to use.\"\n}"
+      }
+    ],
+    "isError": false
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-05-03T15:06:53.821Z",
+  "runStamp": "2026-05-03_110632",
+  "includeDangerous": false,
+  "testFile": "group-a-telemetry/test-get-system-info/test.js",
+  "id": "group-a-telemetry/test-get-system-info",
+  "status": "pass",
+  "durationMs": 3851,
+  "notes": "System info keys present",
+  "details": {
+    "hostname": "LAPTOP-GOMKH6MT",
+    "os": "Microsoft Windows 11 Home"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "runId": "2026-05-02_223957_visible-mouse-demo",
+  "scenarioId": "visible-mouse-demo",
+  "profileId": "default-quiet",
+  "startedAt": "2026-05-03T02:39:57.432Z",
+  "finishedAt": "2026-05-03T02:40:00.348Z",
+  "totalSteps": 2,
+  "passed": 2,
+  "failed": 0,
+  "steps": [
+    {
+      "index": 0,
+      "id": "notify-start",
+      "tool": "send_notification",
+      "status": "pass",
+      "reason": "Expectation passed",
+      "completedAt": "2026-05-03T02:39:59.317Z"
+    },
+    {
+      "index": 1,
+      "id": "get-cursor",
+      "tool": "get_mouse_position",
+      "status": "pass",
+      "reason": "Expectation passed",
+      "completedAt": "2026-05-03T02:40:00.301Z"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "imagePath": "C:\\Users\\justi\\mcp-servers\\os-bridge\\tests\\ux-runner\\artifacts\\runs\\2026-05-03_043236_agent-mode-parity\\steps\\002-system-info\\screen.png",
+  "stats": {
+    "byteLength": 62730,
+    "checksum": 7646196
+  },
+  "diffFromPrevious": {
+    "byteDelta": -56,
+    "checksumDelta": -11002
+  }
+}

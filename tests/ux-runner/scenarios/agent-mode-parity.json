@@ -1,0 +1,66 @@
+{
+  "id": "agent-mode-parity",
+  "title": "Agent-mode parity smoke for visibility, control state, and checkpoint-safe orchestration",
+  "tags": ["agent-mode", "parity", "visual", "regression", "safe"],
+  "mode": "visible",
+  "requiredTools": [
+    "set_execution_profile",
+    "send_notification",
+    "get_system_info",
+    "get_processes",
+    "get_control_state",
+    "take_screenshot"
+  ],
+  "captureAfterEachStep": true,
+  "steps": [
+    {
+      "id": "announce-start",
+      "tool": "send_notification",
+      "risk": "low",
+      "args": {
+        "title": "os-bridge",
+        "message": "Agent-mode parity scenario is starting."
+      },
+      "expect": { "ok": true }
+    },
+    {
+      "id": "system-info",
+      "tool": "get_system_info",
+      "risk": "low",
+      "captureScreenshot": true,
+      "diffWithPreviousScreenshot": true,
+      "expect": {
+        "ok": true,
+        "jsonHasKeys": ["cpu", "memory", "hostname", "os"]
+      }
+    },
+    {
+      "id": "processes",
+      "tool": "get_processes",
+      "risk": "low",
+      "args": { "limit": 8, "sortBy": "memory" },
+      "captureScreenshot": true,
+      "diffWithPreviousScreenshot": true,
+      "expect": { "ok": true }
+    },
+    {
+      "id": "control-state",
+      "tool": "get_control_state",
+      "risk": "low",
+      "expect": {
+        "ok": true,
+        "jsonHasKeys": ["inputAllowed", "executionProfile"]
+      }
+    },
+    {
+      "id": "announce-complete",
+      "tool": "send_notification",
+      "risk": "low",
+      "args": {
+        "title": "os-bridge",
+        "message": "Agent-mode parity scenario completed successfully."
+      },
+      "expect": { "ok": true }
+    }
+  ]
+}

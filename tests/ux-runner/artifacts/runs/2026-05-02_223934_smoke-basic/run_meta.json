@@ -1,0 +1,17 @@
+{
+  "runId": "2026-05-02_223934_smoke-basic",
+  "startedAt": "2026-05-03T02:39:34.217Z",
+  "scenarioId": "smoke-basic",
+  "scenarioTitle": "Smoke validation for UX runner core loop",
+  "profileId": "default-quiet",
+  "startIndex": 0,
+  "toolsDiscovered": 31,
+  "requiredTools": [
+    "get_system_info",
+    "get_processes",
+    "get_control_state",
+    "set_execution_profile",
+    "request_control",
+    "release_control"
+  ]
+}

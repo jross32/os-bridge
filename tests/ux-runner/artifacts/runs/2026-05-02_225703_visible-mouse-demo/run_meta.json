@@ -1,0 +1,23 @@
+{
+  "runId": "2026-05-02_225703_visible-mouse-demo",
+  "startedAt": "2026-05-03T02:57:03.757Z",
+  "scenarioId": "visible-mouse-demo",
+  "scenarioTitle": "Visible mode demo with announcements and reversible mouse motion",
+  "profileId": "default-quiet",
+  "effectiveMode": "visible",
+  "visibleOverride": true,
+  "startIndex": 0,
+  "toolsDiscovered": 31,
+  "requiredTools": [
+    "set_execution_profile",
+    "send_notification",
+    "get_mouse_position",
+    "move_mouse"
+  ],
+  "tags": [
+    "visual",
+    "demo",
+    "safe"
+  ],
+  "resumedFromCheckpoint": false
+}

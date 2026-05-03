@@ -1,0 +1,10 @@
+{
+  "index": 0,
+  "id": "notify-start",
+  "tool": "send_notification",
+  "args": {
+    "title": "ux-runner",
+    "message": "Visible mouse demo is starting."
+  },
+  "startedAt": "2026-05-03T02:40:28.836Z"
+}

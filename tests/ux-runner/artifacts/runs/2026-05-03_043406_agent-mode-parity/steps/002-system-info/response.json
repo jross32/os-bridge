@@ -1,0 +1,38 @@
+{
+  "ok": true,
+  "text": "{\n  \"username\": \"justi\",\n  \"cpu\": {\n    \"logicalProcessors\": 8,\n    \"name\": \"AMD Ryzen 7 3750H with Radeon Vega Mobile Gfx  \",\n    \"cores\": 4,\n    \"loadPercent\": 69\n  },\n  \"osVersion\": \"10.0.22631\",\n  \"disks\": [\n    {\n      \"Name\": \"C\",\n      \"usedGB\": 467.01,\n      \"freeGB\": 8.97\n    }\n  ],\n  \"os\": \"Microsoft Windows 11 Home\",\n  \"hostname\": \"LAPTOP-GOMKH6MT\",\n  \"memory\": {\n    \"freeGB\": 2.46,\n    \"totalGB\": 15.81,\n    \"usedPercent\": 84.4\n  },\n  \"uptimeHours\": 80.5\n}",
+  "json": {
+    "username": "justi",
+    "cpu": {
+      "logicalProcessors": 8,
+      "name": "AMD Ryzen 7 3750H with Radeon Vega Mobile Gfx  ",
+      "cores": 4,
+      "loadPercent": 69
+    },
+    "osVersion": "10.0.22631",
+    "disks": [
+      {
+        "Name": "C",
+        "usedGB": 467.01,
+        "freeGB": 8.97
+      }
+    ],
+    "os": "Microsoft Windows 11 Home",
+    "hostname": "LAPTOP-GOMKH6MT",
+    "memory": {
+      "freeGB": 2.46,
+      "totalGB": 15.81,
+      "usedPercent": 84.4
+    },
+    "uptimeHours": 80.5
+  },
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"username\": \"justi\",\n  \"cpu\": {\n    \"logicalProcessors\": 8,\n    \"name\": \"AMD Ryzen 7 3750H with Radeon Vega Mobile Gfx  \",\n    \"cores\": 4,\n    \"loadPercent\": 69\n  },\n  \"osVersion\": \"10.0.22631\",\n  \"disks\": [\n    {\n      \"Name\": \"C\",\n      \"usedGB\": 467.01,\n      \"freeGB\": 8.97\n    }\n  ],\n  \"os\": \"Microsoft Windows 11 Home\",\n  \"hostname\": \"LAPTOP-GOMKH6MT\",\n  \"memory\": {\n    \"freeGB\": 2.46,\n    \"totalGB\": 15.81,\n    \"usedPercent\": 84.4\n  },\n  \"uptimeHours\": 80.5\n}"
+      }
+    ],
+    "isError": false
+  }
+}

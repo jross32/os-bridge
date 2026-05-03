@@ -1,0 +1,18 @@
+UX Runner Summary
+Run ID: 2026-05-02_225908_smoke-basic
+Scenario: smoke-basic
+Profile: default-quiet
+Effective mode: quiet
+Started: 2026-05-03T02:59:08.656Z
+Finished: 2026-05-03T02:59:19.037Z
+Total steps: 3
+Skipped from checkpoint: 1
+Executed this run: 2
+Passed: 2
+Failed: 0
+
+Step Results:
+- [PASS] 2. processes (get_processes)
+  reason: Expectation passed
+- [PASS] 3. control-state (get_control_state)
+  reason: Expectation passed

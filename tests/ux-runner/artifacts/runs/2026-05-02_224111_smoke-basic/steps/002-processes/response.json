@@ -1,0 +1,50 @@
+{
+  "ok": true,
+  "text": "[\n  {\n    \"Id\": 3300,\n    \"ProcessName\": \"Memory Compression\",\n    \"CpuS\": 0,\n    \"MemMB\": 897.8,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 15812,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 5629.92,\n    \"MemMB\": 805.1,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 41676,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 2037.75,\n    \"MemMB\": 573.6,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 105936,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 2544.56,\n    \"MemMB\": 488.8,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 17164,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 4026.48,\n    \"MemMB\": 437.3,\n    \"MainWindowTitle\": \"\"\n  }\n]",
+  "json": [
+    {
+      "Id": 3300,
+      "ProcessName": "Memory Compression",
+      "CpuS": 0,
+      "MemMB": 897.8,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 15812,
+      "ProcessName": "Code",
+      "CpuS": 5629.92,
+      "MemMB": 805.1,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 41676,
+      "ProcessName": "Code",
+      "CpuS": 2037.75,
+      "MemMB": 573.6,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 105936,
+      "ProcessName": "Code",
+      "CpuS": 2544.56,
+      "MemMB": 488.8,
+      "MainWindowTitle": ""
+    },
+    {
+      "Id": 17164,
+      "ProcessName": "Code",
+      "CpuS": 4026.48,
+      "MemMB": 437.3,
+      "MainWindowTitle": ""
+    }
+  ],
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "[\n  {\n    \"Id\": 3300,\n    \"ProcessName\": \"Memory Compression\",\n    \"CpuS\": 0,\n    \"MemMB\": 897.8,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 15812,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 5629.92,\n    \"MemMB\": 805.1,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 41676,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 2037.75,\n    \"MemMB\": 573.6,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 105936,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 2544.56,\n    \"MemMB\": 488.8,\n    \"MainWindowTitle\": \"\"\n  },\n  {\n    \"Id\": 17164,\n    \"ProcessName\": \"Code\",\n    \"CpuS\": 4026.48,\n    \"MemMB\": 437.3,\n    \"MainWindowTitle\": \"\"\n  }\n]"
+      }
+    ],
+    "isError": false
+  }
+}

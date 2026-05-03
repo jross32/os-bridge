@@ -1,0 +1,16 @@
+UX Runner Summary
+Run ID: 2026-05-02_224028_visible-mouse-demo
+Scenario: visible-mouse-demo
+Profile: default-quiet
+Effective mode: visible
+Started: 2026-05-03T02:40:28.820Z
+Finished: 2026-05-03T02:40:31.966Z
+Total steps: 2
+Passed: 2
+Failed: 0
+
+Step Results:
+- [PASS] 1. notify-start (send_notification)
+  reason: Expectation passed
+- [PASS] 2. get-cursor (get_mouse_position)
+  reason: Expectation passed

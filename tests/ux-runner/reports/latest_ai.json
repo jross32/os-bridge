@@ -1,0 +1,56 @@
+{
+  "runId": "2026-05-03_043406_agent-mode-parity",
+  "scenarioId": "agent-mode-parity",
+  "profileId": "agent-mode-visible",
+  "effectiveMode": "visible",
+  "visibleOverride": true,
+  "startedAt": "2026-05-03T08:34:06.225Z",
+  "finishedAt": "2026-05-03T08:34:29.070Z",
+  "totalSteps": 5,
+  "skippedFromCheckpoint": 0,
+  "executedSteps": 5,
+  "passed": 5,
+  "failed": 0,
+  "steps": [
+    {
+      "index": 0,
+      "id": "announce-start",
+      "tool": "send_notification",
+      "status": "pass",
+      "reason": "Expectation passed",
+      "completedAt": "2026-05-03T08:34:08.464Z"
+    },
+    {
+      "index": 1,
+      "id": "system-info",
+      "tool": "get_system_info",
+      "status": "pass",
+      "reason": "Expectation passed",
+      "completedAt": "2026-05-03T08:34:12.740Z"
+    },
+    {
+      "index": 2,
+      "id": "processes",
+      "tool": "get_processes",
+      "status": "pass",
+      "reason": "Expectation passed",
+      "completedAt": "2026-05-03T08:34:23.606Z"
+    },
+    {
+      "index": 3,
+      "id": "control-state",
+      "tool": "get_control_state",
+      "status": "pass",
+      "reason": "Expectation passed",
+      "completedAt": "2026-05-03T08:34:25.434Z"
+    },
+    {
+      "index": 4,
+      "id": "announce-complete",
+      "tool": "send_notification",
+      "status": "pass",
+      "reason": "Expectation passed",
+      "completedAt": "2026-05-03T08:34:28.925Z"
+    }
+  ]
+}

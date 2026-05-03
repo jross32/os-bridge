@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "text": "{\n  \"emergencyStopped\": false,\n  \"userPaused\": false,\n  \"inputAllowed\": true,\n  \"executionProfile\": {\n    \"mode\": \"visible\",\n    \"announceActions\": true,\n    \"preActionDelayMs\": 1000,\n    \"notificationTitle\": \"os-bridge agent mode\",\n    \"humanTakeoverHint\": \"Use pause_control or emergency_stop to take over instantly.\"\n  },\n  \"hint\": \"Input tools (mouse/keyboard/window) are ready to use.\"\n}",
+  "json": {
+    "emergencyStopped": false,
+    "userPaused": false,
+    "inputAllowed": true,
+    "executionProfile": {
+      "mode": "visible",
+      "announceActions": true,
+      "preActionDelayMs": 1000,
+      "notificationTitle": "os-bridge agent mode",
+      "humanTakeoverHint": "Use pause_control or emergency_stop to take over instantly."
+    },
+    "hint": "Input tools (mouse/keyboard/window) are ready to use."
+  },
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"emergencyStopped\": false,\n  \"userPaused\": false,\n  \"inputAllowed\": true,\n  \"executionProfile\": {\n    \"mode\": \"visible\",\n    \"announceActions\": true,\n    \"preActionDelayMs\": 1000,\n    \"notificationTitle\": \"os-bridge agent mode\",\n    \"humanTakeoverHint\": \"Use pause_control or emergency_stop to take over instantly.\"\n  },\n  \"hint\": \"Input tools (mouse/keyboard/window) are ready to use.\"\n}"
+      }
+    ],
+    "isError": false
+  }
+}

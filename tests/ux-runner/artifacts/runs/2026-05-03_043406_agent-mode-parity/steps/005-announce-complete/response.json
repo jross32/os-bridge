@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "text": "Notification sent",
+  "json": null,
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Notification sent"
+      }
+    ],
+    "isError": false
+  }
+}

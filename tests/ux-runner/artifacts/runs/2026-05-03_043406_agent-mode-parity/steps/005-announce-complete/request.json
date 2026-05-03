@@ -1,0 +1,12 @@
+{
+  "index": 4,
+  "id": "announce-complete",
+  "tool": "send_notification",
+  "args": {
+    "title": "os-bridge",
+    "message": "Agent-mode parity scenario completed successfully."
+  },
+  "risk": "low",
+  "gateReason": "No explicit confirmation required",
+  "startedAt": "2026-05-03T08:34:25.446Z"
+}

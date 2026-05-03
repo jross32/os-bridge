@@ -1,0 +1,36 @@
+{
+  "id": "visible-mouse-demo",
+  "title": "Visible mode demo with announcements and reversible mouse motion",
+  "tags": ["visual", "demo", "safe"],
+  "mode": "visible",
+  "requiredTools": [
+    "set_execution_profile",
+    "send_notification",
+    "get_mouse_position",
+    "move_mouse"
+  ],
+  "captureAfterEachStep": false,
+  "steps": [
+    {
+      "id": "notify-start",
+      "tool": "send_notification",
+      "risk": "low",
+      "args": {
+        "title": "ux-runner",
+        "message": "Visible mouse demo is starting."
+      },
+      "expect": { "ok": true }
+    },
+    {
+      "id": "get-cursor",
+      "tool": "get_mouse_position",
+      "risk": "low",
+      "captureScreenshot": true,
+      "diffWithPreviousScreenshot": true,
+      "expect": {
+        "ok": true,
+        "jsonHasKeys": ["x", "y"]
+      }
+    }
+  ]
+}
