@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T16:29:14.161Z",
-  "runStamp": "2026-05-03_122857",
+  "timestamp": "2026-05-03T16:33:05.706Z",
+  "runStamp": "2026-05-03_123247",
   "includeDangerous": false,
   "testFile": "group-a-telemetry/test-get-screen-size/test.js",
   "id": "group-a-telemetry/test-get-screen-size",
   "status": "pass",
-  "durationMs": 1254,
+  "durationMs": 1269,
   "notes": "Screen metrics shape validated",
   "details": {
     "monitors": 1

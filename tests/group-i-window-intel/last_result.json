@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T16:29:54.321Z",
-  "runStamp": "2026-05-03_122857",
+  "timestamp": "2026-05-03T16:33:47.349Z",
+  "runStamp": "2026-05-03_123247",
   "includeDangerous": false,
   "testFile": "group-i-window-intel/test.js",
   "id": "group-i-window-intel",
   "status": "pass",
-  "durationMs": 6714,
+  "durationMs": 6603,
   "notes": "Window intelligence tools returned expected structures",
   "details": {
     "visibleWindows": 6,

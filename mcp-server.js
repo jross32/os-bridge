@@ -1220,6 +1220,140 @@ $roots | Select-Object -First 80 | ConvertTo-Json -Depth 2 -Compress`;
   return tryJson(psRun(script, 20000));
 }
 
+// ── Wave 3: File System Intelligence ─────────────────────────────────────────
+
+function readFileLines(args) {
+  if (!args.filePath) throw new Error('filePath required');
+  const filePath = path.resolve(String(args.filePath));
+  if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
+  const stat = fs.statSync(filePath);
+  if (!stat.isFile()) throw new Error(`Not a file: ${filePath}`);
+
+  const startLine = Math.max(1, Number.isFinite(args.startLine) ? args.startLine : 1);
+  const endLine   = Number.isFinite(args.endLine) ? args.endLine : startLine + 199;
+  const maxLines  = Math.min(endLine - startLine + 1, 500);
+
+  const content = fs.readFileSync(filePath, 'utf8');
+  const lines   = content.split('\n');
+  const total   = lines.length;
+  const sliced  = lines.slice(startLine - 1, startLine - 1 + maxLines);
+
+  return {
+    filePath,
+    startLine,
+    endLine:    startLine + sliced.length - 1,
+    totalLines: total,
+    truncated:  startLine + maxLines - 1 < endLine,
+    lines:      sliced,
+  };
+}
+
+function grepFile(args) {
+  if (!args.filePath) throw new Error('filePath required');
+  if (!args.pattern)  throw new Error('pattern required');
+  const filePath   = path.resolve(String(args.filePath));
+  if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
+
+  const flags    = args.ignoreCase ? 'i' : '';
+  const re       = new RegExp(args.pattern, flags);
+  const maxMatch = Math.min(Number.isFinite(args.maxMatches) ? args.maxMatches : 100, 500);
+  const content  = fs.readFileSync(filePath, 'utf8');
+  const lines    = content.split('\n');
+  const matches  = [];
+
+  for (let i = 0; i < lines.length && matches.length < maxMatch; i++) {
+    if (re.test(lines[i])) {
+      matches.push({ lineNumber: i + 1, line: lines[i] });
+    }
+  }
+
+  return {
+    filePath,
+    pattern:     args.pattern,
+    ignoreCase:  Boolean(args.ignoreCase),
+    totalLines:  lines.length,
+    matchCount:  matches.length,
+    truncated:   matches.length >= maxMatch,
+    matches,
+  };
+}
+
+function diffFiles(args) {
+  if (!args.fileA) throw new Error('fileA required');
+  if (!args.fileB) throw new Error('fileB required');
+  const fileA = path.resolve(String(args.fileA));
+  const fileB = path.resolve(String(args.fileB));
+  if (!fs.existsSync(fileA)) throw new Error(`fileA not found: ${fileA}`);
+  if (!fs.existsSync(fileB)) throw new Error(`fileB not found: ${fileB}`);
+
+  const linesA = fs.readFileSync(fileA, 'utf8').split('\n');
+  const linesB = fs.readFileSync(fileB, 'utf8').split('\n');
+
+  // Simple unified-diff-style output (Myers-lite: line-level additions/removals)
+  const hunks = [];
+  const maxHunks = 200;
+  let ia = 0, ib = 0;
+
+  while ((ia < linesA.length || ib < linesB.length) && hunks.length < maxHunks) {
+    if (ia < linesA.length && ib < linesB.length && linesA[ia] === linesB[ib]) {
+      ia++; ib++;
+    } else {
+      // collect a block of differences
+      const blockA = [], blockB = [];
+      const startA = ia + 1, startB = ib + 1;
+      while (ia < linesA.length || ib < linesB.length) {
+        if (ia < linesA.length && ib < linesB.length && linesA[ia] === linesB[ib]) break;
+        if (ia < linesA.length) blockA.push(linesA[ia++]);
+        if (ib < linesB.length) blockB.push(linesB[ib++]);
+      }
+      hunks.push({ startA, startB, removed: blockA, added: blockB });
+    }
+  }
+
+  return {
+    fileA, fileB,
+    linesA: linesA.length,
+    linesB: linesB.length,
+    identical: hunks.length === 0,
+    hunkCount: hunks.length,
+    truncated: hunks.length >= maxHunks,
+    hunks,
+  };
+}
+
+function hashFile(args) {
+  if (!args.filePath) throw new Error('filePath required');
+  const filePath  = path.resolve(String(args.filePath));
+  if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
+  const algorithm = (args.algorithm || 'sha256').toLowerCase();
+  if (!['md5', 'sha1', 'sha256', 'sha512'].includes(algorithm)) {
+    throw new Error('algorithm must be md5, sha1, sha256, or sha512');
+  }
+  const crypto = require('crypto');
+  const buf    = fs.readFileSync(filePath);
+  const hash   = crypto.createHash(algorithm).update(buf).digest('hex');
+  const stat   = fs.statSync(filePath);
+  return { filePath, algorithm, hash, sizeBytes: stat.size };
+}
+
+function watchFileChanges(args) {
+  if (!args.filePath) throw new Error('filePath required');
+  const filePath = path.resolve(String(args.filePath));
+  const exists   = fs.existsSync(filePath);
+  if (!exists) {
+    return { filePath, exists: false, sizeBytes: null, mtimeMs: null, mtimeIso: null };
+  }
+  const stat = fs.statSync(filePath);
+  return {
+    filePath,
+    exists:    true,
+    sizeBytes: stat.size,
+    mtimeMs:   stat.mtimeMs,
+    mtimeIso:  new Date(stat.mtimeMs).toISOString(),
+    mode:      stat.mode.toString(8),
+  };
+}
+
 function getExecutionProfile() {
   return {
     ...executionProfile,
@@ -1440,6 +1574,69 @@ const TOOLS = [
         maxResults: { type: 'number', description: 'Max results (default 50)' },
       },
       required: ['pattern'],
+    },
+  },
+  // ── File System Intelligence ───────────────────────────────────────────────
+  {
+    name: 'read_file_lines',
+    description: 'Read a specific line range from a file. Ideal for large files where you only need a portion.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filePath:  { type: 'string', description: 'Absolute path to file' },
+        startLine: { type: 'number', description: '1-based start line (default: 1)' },
+        endLine:   { type: 'number', description: '1-based end line inclusive (default: startLine + 199, max 500 lines returned)' },
+      },
+      required: ['filePath'],
+    },
+  },
+  {
+    name: 'grep_file',
+    description: 'Search a file for lines matching a regex pattern. Returns matching lines with their line numbers.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filePath:   { type: 'string', description: 'Absolute path to file' },
+        pattern:    { type: 'string', description: 'JavaScript regex pattern' },
+        ignoreCase: { type: 'boolean', description: 'Case-insensitive match (default: false)' },
+        maxMatches: { type: 'number', description: 'Max matching lines to return (default 100, max 500)' },
+      },
+      required: ['filePath', 'pattern'],
+    },
+  },
+  {
+    name: 'diff_files',
+    description: 'Compare two files line-by-line and return a structured diff with added/removed hunks.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        fileA: { type: 'string', description: 'Absolute path to first file' },
+        fileB: { type: 'string', description: 'Absolute path to second file' },
+      },
+      required: ['fileA', 'fileB'],
+    },
+  },
+  {
+    name: 'hash_file',
+    description: 'Compute a cryptographic hash (MD5, SHA1, SHA256, or SHA512) of a file.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filePath:  { type: 'string', description: 'Absolute path to file' },
+        algorithm: { type: 'string', enum: ['md5', 'sha1', 'sha256', 'sha512'], description: 'Hash algorithm (default: sha256)' },
+      },
+      required: ['filePath'],
+    },
+  },
+  {
+    name: 'watch_file_changes',
+    description: 'Stat a file and return its current size and modification time. Useful for polling a file for changes between calls.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Absolute path to file' },
+      },
+      required: ['filePath'],
     },
   },
   {
@@ -1828,6 +2025,11 @@ async function handleTool(name, args) {
     case 'kill_process':        return killProcess(args);
     case 'get_open_ports':      return getOpenPorts();
     case 'search_files':        return searchFiles(args);
+    case 'read_file_lines':     return readFileLines(args);
+    case 'grep_file':           return grepFile(args);
+    case 'diff_files':          return diffFiles(args);
+    case 'hash_file':           return hashFile(args);
+    case 'watch_file_changes':  return watchFileChanges(args);
     case 'get_screen_size':     return getScreenSize();
     case 'read_clipboard':      return readClipboard();
     case 'write_clipboard':     return writeClipboard(args);

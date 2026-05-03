@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-05-03T16:29:24.164Z",
-  "runStamp": "2026-05-03_122857",
+  "timestamp": "2026-05-03T16:33:18.086Z",
+  "runStamp": "2026-05-03_123247",
   "includeDangerous": false,
   "testFile": "group-f-visual/test-get-window-rect/test.js",
   "id": "group-f-visual/test-get-window-rect",
   "status": "fail",
-  "durationMs": 6647,
-  "error": "get_window_rect failed for 'Web Scraper MCP - Tool Reference - Google Chrome': Error in get_window_rect: No window found matching: Web Scraper MCP - To\r\nAt C:\\Users\\justi\\AppData\\Local\\Temp\\osb_1777825761983_92gieelpvw.ps1:13 char:19\r\n+ ... not $proc) { throw \"No window found matching: Web Scraper MCP - To\" }\r\n+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : OperationStopped: (No window found...craper MCP - To:String) [], RuntimeException\r\n    + FullyQualifiedErrorId : No window found matching: Web Scraper MCP - To"
+  "durationMs": 8291,
+  "error": "get_window_rect failed for 'Web Scraper MCP - Tool Reference - Google Chrome': Error in get_window_rect: No window found matching: Web Scraper MCP - To\r\nAt C:\\Users\\justi\\AppData\\Local\\Temp\\osb_1777825995264_ime9thbjc3b.ps1:13 char:19\r\n+ ... not $proc) { throw \"No window found matching: Web Scraper MCP - To\" }\r\n+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : OperationStopped: (No window found...craper MCP - To:String) [], RuntimeException\r\n    + FullyQualifiedErrorId : No window found matching: Web Scraper MCP - To"
 }
