@@ -23,6 +23,13 @@ const path = require('path');
 const fs   = require('fs');
 const crypto = require('crypto');
 
+let SERVER_VERSION = '0.0.0';
+try {
+  SERVER_VERSION = require('./package.json').version || SERVER_VERSION;
+} catch {
+  // Keep default when package metadata is unavailable.
+}
+
 // ── Persistent shell sessions ─────────────────────────────────────────────────
 // Map of sessionId → { proc, outputBuf, errorBuf, exitCode, closed }
 const shellSessions = new Map();
@@ -935,8 +942,13 @@ function openUrl(args) {
 }
 
 async function getWindowRect(args) {
-  if (!args.title) throw new Error('title required');
-  const title = args.title.replace(/'/g, "''");
+  if (args.pid == null && !args.hwnd && !args.title) {
+    throw new Error('one of pid, hwnd, or title is required');
+  }
+  const title = args.title ? String(args.title).replace(/'/g, "''") : '';
+  const pid = Number.isFinite(args.pid) ? Number(args.pid) : null;
+  const hwnd = args.hwnd ? String(args.hwnd).replace(/'/g, "''") : '';
+  const titleCond = title ? `$proc = Get-Process | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero -and $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1` : '';
   const script = `
 Add-Type -TypeDefinition @'
 using System;
@@ -948,17 +960,42 @@ public class WinRect {
     [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
 }
 '@ -ErrorAction SilentlyContinue
-$proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
-if (-not $proc) { throw "No window found matching: ${title}" }
+$proc = $null
+$matchedBy = $null
+if (${pid === null ? '$false' : '$true'}) {
+  $proc = Get-Process -Id ${pid === null ? 0 : pid} -ErrorAction SilentlyContinue |
+    Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } |
+    Select-Object -First 1
+  if ($proc) { $matchedBy = 'pid' }
+}
+if (-not $proc -and '${hwnd}' -ne '') {
+  try {
+    $targetHwnd = [IntPtr]([Int64]'${hwnd}')
+    $proc = Get-Process | Where-Object { $_.MainWindowHandle -eq $targetHwnd } | Select-Object -First 1
+    if ($proc) { $matchedBy = 'hwnd' }
+  } catch {}
+}
+if (-not $proc) {
+  ${titleCond}
+  if ($proc) { $matchedBy = 'title' }
+}
+if (-not $proc) {
+  throw "No window found for pid=${pid === null ? 'null' : pid}, hwnd=${hwnd || '<none>'}, title=${title || '<none>'}"
+}
 $rect = New-Object WinRect+RECT
 [WinRect]::GetWindowRect($proc.MainWindowHandle, [ref]$rect) | Out-Null
-@{ x = $rect.Left; y = $rect.Top; width = ($rect.Right - $rect.Left); height = ($rect.Bottom - $rect.Top); pid = [int]$proc.Id; processName = $proc.ProcessName; title = $proc.MainWindowTitle } | ConvertTo-Json -Compress`;
+@{ x = $rect.Left; y = $rect.Top; width = ($rect.Right - $rect.Left); height = ($rect.Bottom - $rect.Top); pid = [int]$proc.Id; processName = $proc.ProcessName; title = $proc.MainWindowTitle; matchedBy = $matchedBy } | ConvertTo-Json -Compress`;
   return tryJson(psRun(script, 15000));
 }
 
 async function screenshotWindow(args) {
-  if (!args.title) throw new Error('title required');
-  const title = args.title.replace(/'/g, "''");
+  if (args.pid == null && !args.hwnd && !args.title) {
+    throw new Error('one of pid, hwnd, or title is required');
+  }
+  const title = args.title ? String(args.title).replace(/'/g, "''") : '';
+  const pid = Number.isFinite(args.pid) ? Number(args.pid) : null;
+  const hwnd = args.hwnd ? String(args.hwnd).replace(/'/g, "''") : '';
+  const titleCond = title ? `$proc = Get-Process | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero -and $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1` : '';
   const script = `
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
@@ -973,7 +1010,25 @@ public class WinCapture {
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
 }
 '@ -ErrorAction SilentlyContinue
-$proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
+$proc = $null
+$matchedBy = $null
+if (${pid === null ? '$false' : '$true'}) {
+  $proc = Get-Process -Id ${pid === null ? 0 : pid} -ErrorAction SilentlyContinue |
+    Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } |
+    Select-Object -First 1
+  if ($proc) { $matchedBy = 'pid' }
+}
+if (-not $proc -and '${hwnd}' -ne '') {
+  try {
+    $targetHwnd = [IntPtr]([Int64]'${hwnd}')
+    $proc = Get-Process | Where-Object { $_.MainWindowHandle -eq $targetHwnd } | Select-Object -First 1
+    if ($proc) { $matchedBy = 'hwnd' }
+  } catch {}
+}
+if (-not $proc) {
+  ${titleCond}
+  if ($proc) { $matchedBy = 'title' }
+}
 if (-not $proc) {
   $s = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
   $bmp = New-Object System.Drawing.Bitmap($s.Width, $s.Height)
@@ -1003,7 +1058,8 @@ if (-not $proc) {
   let b64 = raw, warning;
   if (raw.startsWith('FALLBACK:')) {
     b64 = raw.slice('FALLBACK:'.length);
-    warning = `No window matched '${args.title}' — captured full primary screen instead`;
+    const selector = args.pid != null ? `pid=${args.pid}` : (args.hwnd ? `hwnd=${args.hwnd}` : `title='${args.title}'`);
+    warning = `No window matched ${selector} — captured full primary screen instead`;
   }
   const result = { mimeType: 'image/png', data: b64.trim(), _isImage: true };
   if (warning) result.warning = warning;
@@ -2012,25 +2068,27 @@ const TOOLS = [
   },
   {
     name: 'get_window_rect',
-    description: 'Get the screen coordinates and dimensions of a window by title. Returns {x, y, width, height, pid, processName, title}.',
+    description: 'Get the screen coordinates and dimensions of a window by pid, hwnd, or title. Returns {x, y, width, height, pid, processName, title, matchedBy}.',
     inputSchema: {
       type: 'object',
       properties: {
+        pid:   { type: 'number', description: 'Target window process ID (preferred for reliability)' },
+        hwnd:  { type: 'string', description: 'Target window handle as decimal string' },
         title: { type: 'string', description: 'Window title pattern (partial match, case-insensitive)' },
       },
-      required: ['title'],
       additionalProperties: false,
     },
   },
   {
     name: 'screenshot_window',
-    description: 'Capture a screenshot of a specific window by title. Focuses and crops to the window bounds. Falls back to full screen if the window is not found.',
+    description: 'Capture a screenshot of a specific window by pid, hwnd, or title. Focuses and crops to the window bounds. Falls back to full screen if no target is found.',
     inputSchema: {
       type: 'object',
       properties: {
+        pid:   { type: 'number', description: 'Target window process ID (preferred for reliability)' },
+        hwnd:  { type: 'string', description: 'Target window handle as decimal string' },
         title: { type: 'string', description: 'Window title pattern (partial match, case-insensitive)' },
       },
-      required: ['title'],
       additionalProperties: false,
     },
   },
@@ -2334,7 +2392,7 @@ rl.on('line', async (rawLine) => {
         result = {
           protocolVersion: '2024-11-05',
           capabilities: { tools: { listChanged: false }, prompts: { listChanged: false } },
-          serverInfo: { name: 'os-bridge', version: '1.0.0' },
+          serverInfo: { name: 'os-bridge', version: SERVER_VERSION },
         };
         break;
 

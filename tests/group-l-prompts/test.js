@@ -57,9 +57,7 @@ module.exports = {
     } catch (e) {
       errOccurred = true;
     }
-    // The server returns a JSON-RPC error for unknown prompt; client.request rejects on error responses
-    // Accept either throw or an object with error code
-    // (some clients return the error object, others throw)
+    assert(errOccurred, 'prompts/get should error for unknown prompt');
     notes.push('prompts/get unknown: error correctly returned');
 
     return { notes: notes.join('; ') };

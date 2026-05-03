@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-05-03T16:40:56.136Z",
-  "runStamp": "2026-05-03_123956",
+  "timestamp": "2026-05-03T17:09:02.389Z",
+  "runStamp": "2026-05-03_130806",
   "includeDangerous": false,
   "testFile": "group-i-window-intel/test.js",
   "id": "group-i-window-intel",
   "status": "pass",
-  "durationMs": 6515,
+  "durationMs": 6160,
   "notes": "Window intelligence tools returned expected structures",
   "details": {
     "visibleWindows": 6,
-    "focusedTitle": "Extract /apa/ app into s. - Claude2 - Visual Studio Code",
+    "focusedTitle": "Web Scraper MCP - Tool Reference - Google Chrome",
     "hierarchyNodes": 14
   }
 }

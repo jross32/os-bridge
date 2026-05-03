@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-03T16:41:04.185Z",
+  "timestamp": "2026-05-03T17:09:12.209Z",
   "server": {
     "script": "C:\\Users\\justi\\mcp-servers\\os-bridge\\mcp-server.js",
     "toolsDiscovered": 61,
@@ -12,16 +12,16 @@
   },
   "summary": {
     "total": 22,
-    "passed": 21,
-    "failed": 1,
+    "passed": 22,
+    "failed": 0,
     "skipped": 0,
-    "durationMs": 68185
+    "durationMs": 65756
   },
   "tests": [
     {
       "id": "group-a-telemetry/test-get-open-ports",
       "status": "pass",
-      "durationMs": 6560,
+      "durationMs": 5994,
       "notes": "Open ports shape verified",
       "details": {
         "count": 37
@@ -30,7 +30,7 @@
     {
       "id": "group-a-telemetry/test-get-processes",
       "status": "pass",
-      "durationMs": 9656,
+      "durationMs": 9442,
       "notes": "Process query respected limit and row shape",
       "details": {
         "rows": 5
@@ -39,7 +39,7 @@
     {
       "id": "group-a-telemetry/test-get-screen-size",
       "status": "pass",
-      "durationMs": 1174,
+      "durationMs": 1324,
       "notes": "Screen metrics shape validated",
       "details": {
         "monitors": 1
@@ -48,7 +48,7 @@
     {
       "id": "group-a-telemetry/test-get-system-info",
       "status": "pass",
-      "durationMs": 3585,
+      "durationMs": 3565,
       "notes": "System info keys present",
       "details": {
         "hostname": "LAPTOP-GOMKH6MT",
@@ -58,7 +58,7 @@
     {
       "id": "group-b-file-ops/test-file-ops-scenario",
       "status": "pass",
-      "durationMs": 162,
+      "durationMs": 191,
       "notes": "file-ops-demo: scenario valid, catalog updated, MCP round-trip write→read→list all pass",
       "details": {
         "scenarioSteps": 3,
@@ -68,7 +68,7 @@
     {
       "id": "group-b-file-ops/test-get-env-vars",
       "status": "pass",
-      "durationMs": 7,
+      "durationMs": 6,
       "notes": "get_environment_vars: all-mode, prefix-filter, and named-lookup all work",
       "details": {
         "totalVarCount": 68
@@ -77,7 +77,7 @@
     {
       "id": "group-b-file-ops/test-list-directory",
       "status": "pass",
-      "durationMs": 23,
+      "durationMs": 18,
       "notes": "list_directory: flat list, filter, recursive, and error case all pass",
       "details": {
         "count": 3,
@@ -94,16 +94,16 @@
     {
       "id": "group-b-file-ops/test-read-file",
       "status": "pass",
-      "durationMs": 6,
+      "durationMs": 5,
       "notes": "read_file returned correct content",
       "details": {
-        "path": "C:\\Users\\justi\\AppData\\Local\\Temp\\os-bridge-read-test-1777826417517.txt"
+        "path": "C:\\Users\\justi\\AppData\\Local\\Temp\\os-bridge-read-test-1777828107333.txt"
       }
     },
     {
       "id": "group-b-file-ops/test-write-file",
       "status": "pass",
-      "durationMs": 12,
+      "durationMs": 8,
       "notes": "write_file created and appended correctly; verified via read_file",
       "details": {
         "finalSize": 23
@@ -112,14 +112,14 @@
     {
       "id": "group-c-input-control/test-move-mouse-gates",
       "status": "pass",
-      "durationMs": 5,
+      "durationMs": 7,
       "notes": "move_mouse correctly blocked by both safety gates",
       "details": null
     },
     {
       "id": "group-e-control-state/test-control-state-transitions",
       "status": "pass",
-      "durationMs": 6,
+      "durationMs": 7,
       "notes": "Control state transitions behaved as expected",
       "details": null
     },
@@ -132,56 +132,65 @@
     },
     {
       "id": "group-f-visual/test-get-window-rect",
-      "status": "fail",
-      "durationMs": 7638,
-      "error": "get_window_rect failed for 'Web Scraper MCP - Tool Reference - Google Chrome': Error in get_window_rect: No window found matching: Web Scraper MCP - To\r\nAt C:\\Users\\justi\\AppData\\Local\\Temp\\osb_1777826422518_p0590ccno3j.ps1:13 char:19\r\n+ ... not $proc) { throw \"No window found matching: Web Scraper MCP - To\" }\r\n+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : OperationStopped: (No window found...craper MCP - To:String) [], RuntimeException\r\n    + FullyQualifiedErrorId : No window found matching: Web Scraper MCP - To"
+      "status": "pass",
+      "durationMs": 6188,
+      "notes": "get_window_rect: error case and shape validation passed",
+      "details": {
+        "windowTested": "Web Scraper MCP - Tool Reference - Googl",
+        "rect": {
+          "x": 357,
+          "y": -11,
+          "w": 951,
+          "h": 660
+        }
+      }
     },
     {
       "id": "group-f-visual/test-screenshot-window",
       "status": "pass",
-      "durationMs": 8166,
+      "durationMs": 6081,
       "notes": "screenshot_window: fallback + real window capture both pass",
       "details": {
         "windowCaptured": "Web Scraper MCP - Tool Reference - Googl",
-        "imageSizeKB": 128
+        "imageSizeKB": 153
       }
     },
     {
       "id": "group-g-shell-sessions/test-shell-session-lifecycle",
       "status": "pass",
-      "durationMs": 1212,
+      "durationMs": 1241,
       "notes": "shell_open / shell_send / shell_read / shell_list_sessions / shell_close all pass",
       "details": {
-        "sessionId": "a97fc8ee…"
+        "sessionId": "26939b06…"
       }
     },
     {
       "id": "group-h-process-intel",
       "status": "pass",
-      "durationMs": 14992,
+      "durationMs": 15297,
       "notes": "Process intelligence tools returned expected structures and wait/process checks passed",
       "details": {
         "topCpuRows": 3,
         "treeNodes": 3,
-        "summaryRows": 9,
+        "summaryRows": 8,
         "connectionRows": 25
       }
     },
     {
       "id": "group-i-window-intel",
       "status": "pass",
-      "durationMs": 6515,
+      "durationMs": 6160,
       "notes": "Window intelligence tools returned expected structures",
       "details": {
         "visibleWindows": 6,
-        "focusedTitle": "Extract /apa/ app into s. - Claude2 - Visual Studio Code",
+        "focusedTitle": "Web Scraper MCP - Tool Reference - Google Chrome",
         "hierarchyNodes": 14
       }
     },
     {
       "id": "group-j-file-intel",
       "status": "pass",
-      "durationMs": 24,
+      "durationMs": 14,
       "notes": "File system intelligence tools all returned expected structures",
       "details": {
         "testedTools": [
@@ -196,21 +205,21 @@
     {
       "id": "group-k-diagnostics",
       "status": "pass",
-      "durationMs": 6056,
+      "durationMs": 7235,
       "notes": "check_service_status: Spooler found, status=Running; check_service_status: missing service correctly returned found=false; get_installed_software: 5 Microsoft entries found; get_startup_items: 9 startup items; get_event_log_entries: 5 Application log entries",
       "details": null
     },
     {
       "id": "group-l-prompts",
       "status": "pass",
-      "durationMs": 3,
+      "durationMs": 9,
       "notes": "prompts/list: 5 prompts found; prompts/get automate_app: correct structure and interpolation; prompts/get find_memory_hogs: returned workflow message; prompts/get monitor_file: filePath interpolated correctly; prompts/get unknown: error correctly returned",
       "details": null
     },
     {
       "id": "integration/test-clipboard-roundtrip",
       "status": "pass",
-      "durationMs": 1946,
+      "durationMs": 2539,
       "notes": "Clipboard roundtrip succeeded",
       "details": {
         "tokenLength": 33

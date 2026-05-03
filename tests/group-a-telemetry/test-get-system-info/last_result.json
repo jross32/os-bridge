@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T16:40:17.288Z",
-  "runStamp": "2026-05-03_123956",
+  "timestamp": "2026-05-03T17:09:31.212Z",
+  "runStamp": "2026-05-03_130912",
   "includeDangerous": false,
   "testFile": "group-a-telemetry/test-get-system-info/test.js",
   "id": "group-a-telemetry/test-get-system-info",
   "status": "pass",
-  "durationMs": 3585,
+  "durationMs": 3631,
   "notes": "System info keys present",
   "details": {
     "hostname": "LAPTOP-GOMKH6MT",

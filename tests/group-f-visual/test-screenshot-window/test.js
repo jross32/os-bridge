@@ -9,10 +9,10 @@ module.exports = {
     assert(listResp.ok, `list_windows failed: ${listResp.error}`);
     const windows = Array.isArray(listResp.json) ? listResp.json : [];
 
-    // Test 1: fallback (no matching title) — should return full-screen image + warning
+    // Test 1: fallback (no matching pid) — should return full-screen image + warning
     // screenshot_window returns an image result; the MCP client surfaces it as result.image
     // The warning field comes back as a separate text content item or embedded; check both paths.
-    const fallbackResp = await client.callTool('screenshot_window', { title: '__no_such_window_xyz987__' }, 30000);
+    const fallbackResp = await client.callTool('screenshot_window', { pid: -999999 }, 30000);
     assert(fallbackResp.ok, `screenshot_window fallback failed: ${fallbackResp.error}`);
     // Image results surface under result.image (type='image') OR under result.json if the tool
     // returned JSON. Check both paths.
@@ -25,9 +25,9 @@ module.exports = {
       return { notes: 'No visible windows — fallback test passed, window-crop test skipped', details: { windowCount: 0 } };
     }
 
-    // Test 2: screenshot a real window
+    // Test 2: screenshot a real window by PID (stable; avoids title races)
     const win = windows[0];
-    const imgResp = await client.callTool('screenshot_window', { title: win.title.slice(0, 20) }, 30000);
+    const imgResp = await client.callTool('screenshot_window', { pid: win.pid }, 30000);
     assert(imgResp.ok, `screenshot_window failed for '${win.title}': ${imgResp.error}`);
     const img = imgResp.image || imgResp.json;
     assert(img && img.data, 'Should return image data');

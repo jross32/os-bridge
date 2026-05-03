@@ -1,10 +1,19 @@
 {
-  "timestamp": "2026-05-03T16:40:25.223Z",
-  "runStamp": "2026-05-03_123956",
+  "timestamp": "2026-05-03T17:09:36.356Z",
+  "runStamp": "2026-05-03_130912",
   "includeDangerous": false,
   "testFile": "group-f-visual/test-get-window-rect/test.js",
   "id": "group-f-visual/test-get-window-rect",
-  "status": "fail",
-  "durationMs": 7638,
-  "error": "get_window_rect failed for 'Web Scraper MCP - Tool Reference - Google Chrome': Error in get_window_rect: No window found matching: Web Scraper MCP - To\r\nAt C:\\Users\\justi\\AppData\\Local\\Temp\\osb_1777826422518_p0590ccno3j.ps1:13 char:19\r\n+ ... not $proc) { throw \"No window found matching: Web Scraper MCP - To\" }\r\n+                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : OperationStopped: (No window found...craper MCP - To:String) [], RuntimeException\r\n    + FullyQualifiedErrorId : No window found matching: Web Scraper MCP - To"
+  "status": "pass",
+  "durationMs": 4855,
+  "notes": "get_window_rect: error case and shape validation passed",
+  "details": {
+    "windowTested": "Web Scraper MCP - Tool Reference - Googl",
+    "rect": {
+      "x": 357,
+      "y": -11,
+      "w": 951,
+      "h": 660
+    }
+  }
 }
