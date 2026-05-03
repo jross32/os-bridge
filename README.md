@@ -56,7 +56,10 @@ If needed, configure git identity before committing:
 ```powershell
 git config user.name "jross32"
 git config user.email "justinwross32@gmail.com"
+git config commit.template .gitmessage.txt
 ```
+
+This repository includes `.gitmessage.txt` to standardize commit notes and version bump entries.
 
 ## Notes
 

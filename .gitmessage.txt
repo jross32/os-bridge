@@ -1,0 +1,10 @@
+v{version}: {short summary}
+
+Changed:
+- {file}: {what changed}
+
+Bugs fixed:
+- {bug fix details or "none"}
+
+Version bump:
+- {old_version} -> {new_version}
