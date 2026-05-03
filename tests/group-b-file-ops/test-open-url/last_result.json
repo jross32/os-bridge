@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T19:06:53.113Z",
-  "runStamp": "2026-05-03_150630",
+  "timestamp": "2026-05-03T19:13:52.641Z",
+  "runStamp": "2026-05-03_151330",
   "includeDangerous": false,
   "testFile": "group-b-file-ops/test-open-url/test.js",
   "id": "group-b-file-ops/test-open-url",
   "status": "pass",
-  "durationMs": 4,
+  "durationMs": 3,
   "notes": "open_url: bad-URL rejection validated; real launch skipped (pass --dangerous to enable)",
   "details": null
 }

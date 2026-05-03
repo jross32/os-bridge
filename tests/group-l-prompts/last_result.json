@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T19:07:46.278Z",
-  "runStamp": "2026-05-03_150630",
+  "timestamp": "2026-05-03T19:14:42.671Z",
+  "runStamp": "2026-05-03_151330",
   "includeDangerous": false,
   "testFile": "group-l-prompts/test.js",
   "id": "group-l-prompts",
   "status": "pass",
-  "durationMs": 6,
-  "notes": "prompts/list: 5 prompts found; prompts/get automate_app: correct structure and interpolation; prompts/get find_memory_hogs: returned workflow message; prompts/get monitor_file: filePath interpolated correctly; prompts/get unknown: error correctly returned",
+  "durationMs": 8,
+  "notes": "prompts/list: 6 prompts found; prompts/get automate_app: correct structure and interpolation; prompts/get find_memory_hogs: returned workflow message; prompts/get monitor_file: filePath interpolated correctly; prompts/get unknown: error correctly returned",
   "details": null
 }

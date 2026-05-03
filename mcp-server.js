@@ -1722,6 +1722,191 @@ Write-Output (ConvertTo-Json @($entries) -Compress)`;
   return { logName, level: level || 'all', count: list.length, entries: list };
 }
 
+function summarizeWorkflowResultData(data) {
+  if (data && data._isImage) {
+    return {
+      kind: 'image',
+      mimeType: data.mimeType || 'image/png',
+      warning: data.warning || null,
+    };
+  }
+
+  if (typeof data === 'string') {
+    return {
+      kind: 'text',
+      preview: data.length > 300 ? `${data.slice(0, 297)}...` : data,
+    };
+  }
+
+  return {
+    kind: 'json',
+    data,
+  };
+}
+
+async function workflowRunbookExecute(args) {
+  const steps = Array.isArray(args.steps) ? args.steps : [];
+  if (steps.length === 0) throw new Error('steps must be a non-empty array');
+
+  const maxSteps = Math.min(parseInt(args.maxSteps) || 50, 100);
+  if (steps.length > maxSteps) {
+    throw new Error(`steps length ${steps.length} exceeds maxSteps ${maxSteps}`);
+  }
+
+  const stopOnFail = args.stopOnFail !== false;
+  const maxTotalMs = Math.min(parseInt(args.maxTotalMs) || 120000, 600000);
+  const startedAtMs = Date.now();
+  const runId = crypto.randomUUID();
+
+  const results = [];
+  let aborted = false;
+  let abortReason = null;
+
+  for (let idx = 0; idx < steps.length; idx++) {
+    const step = steps[idx] || {};
+    const stepNo = idx + 1;
+    const tool = String(step.tool || '').trim();
+    const toolArgs = (step.arguments && typeof step.arguments === 'object') ? step.arguments : {};
+    const retries = Math.max(0, Math.min(5, parseInt(step.retries) || 0));
+    const continueOnError = step.continueOnError === true;
+    const stepTimeoutMs = Math.max(250, Math.min(120000, parseInt(step.timeoutMs) || 0));
+
+    if (Date.now() - startedAtMs > maxTotalMs) {
+      aborted = true;
+      abortReason = `maxTotalMs exceeded before step ${stepNo}`;
+      break;
+    }
+
+    if (!tool) {
+      results.push({
+        step: stepNo,
+        tool,
+        status: 'failed',
+        attempts: 0,
+        error: normalizeToolError(new Error('step.tool is required'), 'workflow_runbook_execute'),
+      });
+      if (stopOnFail && !continueOnError) {
+        aborted = true;
+        abortReason = `step ${stepNo} missing tool`;
+        break;
+      }
+      continue;
+    }
+
+    if (tool === 'workflow_runbook_execute') {
+      results.push({
+        step: stepNo,
+        tool,
+        status: 'failed',
+        attempts: 0,
+        error: normalizeToolError(new Error('workflow_runbook_execute cannot call itself'), tool),
+      });
+      if (stopOnFail && !continueOnError) {
+        aborted = true;
+        abortReason = `step ${stepNo} attempted recursive workflow call`;
+        break;
+      }
+      continue;
+    }
+
+    let attempt = 0;
+    let succeeded = false;
+    let lastErr = null;
+    let lastData = null;
+
+    while (attempt <= retries && !succeeded) {
+      attempt++;
+      try {
+        const runStep = async () => {
+          const def = getToolDefinitionByName(tool);
+          if (!def) throw new Error(`Unknown tool: ${tool}`);
+          validateToolCallParams(tool, toolArgs);
+          return handleTool(tool, toolArgs);
+        };
+
+        if (stepTimeoutMs > 0) {
+          lastData = await Promise.race([
+            runStep(),
+            new Promise((_, reject) => setTimeout(() => reject(new ToolContractError({
+              code: 'tool_timeout',
+              category: 'timeout',
+              message: `Step ${stepNo} timed out after ${stepTimeoutMs}ms`,
+              retryable: true,
+              suggestedAction: 'Increase step timeoutMs or split into smaller operations.',
+            })), stepTimeoutMs)),
+          ]);
+        } else {
+          lastData = await runStep();
+        }
+        succeeded = true;
+      } catch (err) {
+        lastErr = normalizeToolError(err, tool);
+      }
+    }
+
+    if (succeeded) {
+      results.push({
+        step: stepNo,
+        tool,
+        status: 'succeeded',
+        attempts: attempt,
+        continueOnError,
+        note: step.note || null,
+        result: summarizeWorkflowResultData(lastData),
+      });
+      continue;
+    }
+
+    results.push({
+      step: stepNo,
+      tool,
+      status: 'failed',
+      attempts: attempt,
+      continueOnError,
+      note: step.note || null,
+      error: {
+        code: lastErr.code,
+        category: lastErr.category,
+        message: lastErr.message,
+        retryable: lastErr.retryable,
+        suggestedAction: lastErr.suggestedAction,
+        details: lastErr.details || null,
+      },
+    });
+
+    if (stopOnFail && !continueOnError) {
+      aborted = true;
+      abortReason = `step ${stepNo} failed: ${lastErr.message}`;
+      break;
+    }
+  }
+
+  const finishedAtMs = Date.now();
+  const succeeded = results.filter((r) => r.status === 'succeeded').length;
+  const failed = results.filter((r) => r.status === 'failed').length;
+  const executedSteps = results.length;
+
+  return {
+    runId,
+    startedAt: new Date(startedAtMs).toISOString(),
+    finishedAt: new Date(finishedAtMs).toISOString(),
+    durationMs: finishedAtMs - startedAtMs,
+    stopOnFail,
+    maxSteps,
+    maxTotalMs,
+    aborted,
+    abortReason,
+    completedAllSteps: !aborted && executedSteps === steps.length,
+    summary: {
+      totalSteps: steps.length,
+      executedSteps,
+      succeeded,
+      failed,
+    },
+    steps: results,
+  };
+}
+
 function getExecutionProfile() {
   return {
     ...executionProfile,
@@ -2052,6 +2237,37 @@ const TOOLS = [
         level:   { type: 'string', description: 'Filter by level: Error, Warning, Information' },
         limit:   { type: 'number', description: 'Max entries (default 20, max 200)' },
       },
+    },
+  },
+  {
+    name: 'workflow_runbook_execute',
+    description: 'Execute a multi-step MCP runbook with retries, per-step timeout, and stop/continue policies.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        steps: {
+          type: 'array',
+          description: 'Ordered list of tool steps to execute',
+          items: {
+            type: 'object',
+            properties: {
+              tool: { type: 'string', description: 'Tool name to execute' },
+              arguments: { type: 'object', description: 'Arguments to pass into the tool' },
+              retries: { type: 'number', description: 'Retry attempts after first failure (default 0)', minimum: 0, maximum: 5 },
+              timeoutMs: { type: 'number', description: 'Per-step timeout in ms (default 0 = no local timeout)', minimum: 0, maximum: 120000 },
+              continueOnError: { type: 'boolean', description: 'Continue runbook if this step fails (default false)' },
+              note: { type: 'string', description: 'Optional operator note for this step' },
+            },
+            required: ['tool'],
+            additionalProperties: false,
+          },
+        },
+        stopOnFail: { type: 'boolean', description: 'Stop workflow on first failed step unless step has continueOnError=true (default true)' },
+        maxSteps: { type: 'number', description: 'Maximum allowed steps for this workflow run (default 50, max 100)', minimum: 1, maximum: 100 },
+        maxTotalMs: { type: 'number', description: 'Maximum total workflow duration in ms (default 120000, max 600000)', minimum: 1000, maximum: 600000 },
+      },
+      required: ['steps'],
+      additionalProperties: false,
     },
   },
 
@@ -2455,6 +2671,14 @@ const PROMPTS = [
     description: 'Capture a snapshot of all open windows (title, size, position, PID) for later restore.',
     arguments: [],
   },
+  {
+    name: 'continuous_mcp_improvement',
+    description: 'Run a continuous MCP improvement loop using workflow_runbook_execute with verification and refinement cycles.',
+    arguments: [
+      { name: 'focus', description: 'Primary focus area (contracts, shell safety, prompts, workflows)', required: false },
+      { name: 'maxCycles', description: 'How many cycles to run (default 3)', required: false },
+    ],
+  },
 ];
 
 function getPromptMessages(name, args) {
@@ -2476,7 +2700,7 @@ function getPromptMessages(name, args) {
       return [{ role: 'user', content: { type: 'text', text:
         `Diagnose high memory usage on this Windows machine.\n\n` +
         `Steps:\n` +
-        `1. Call get_processes with sortBy="memoryMB" and limit=10\n` +
+        `1. Call get_processes with sortBy="memory" and limit=10\n` +
         `2. Call process_resource_hotspots to identify CPU+memory hotspots\n` +
         `3. For each top process, call process_tree with its PID to see child processes\n` +
         `4. Report: which processes are consuming the most memory, whether any are unexpected, and recommended actions (kill, restart service, etc.)`
@@ -2515,6 +2739,22 @@ function getPromptMessages(name, args) {
         `4. Save the JSON to a file using write_file so it can be used to restore the layout later`
       } }];
     }
+    case 'continuous_mcp_improvement': {
+      const focus = (args && args.focus) ? String(args.focus) : 'contracts';
+      const cycles = Math.max(1, Math.min(10, parseInt((args && args.maxCycles) || '3') || 3));
+      return [{ role: 'user', content: { type: 'text', text:
+        `Run a continuous MCP improvement workflow focused on: ${focus}.\n\n` +
+        `Loop for ${cycles} cycle(s):\n` +
+        `1. Use workflow_runbook_execute to run a cycle with steps:\n` +
+        `   - get_system_info\n` +
+        `   - get_processes (limit=10, sortBy=memory)\n` +
+        `   - get_event_log_entries (Application, Error, limit=10)\n` +
+        `2. Identify one concrete reliability/usability improvement from outputs\n` +
+        `3. Implement the improvement\n` +
+        `4. Run verification tests\n` +
+        `5. Record what changed and continue to next cycle until complete`
+      } }];
+    }
     default:
       throw new Error(`Unknown prompt: ${name}`);
   }
@@ -2545,6 +2785,7 @@ async function handleTool(name, args) {
     case 'get_installed_software':   return getInstalledSoftware(args);
     case 'get_startup_items':        return getStartupItems();
     case 'get_event_log_entries':    return getEventLogEntries(args);
+    case 'workflow_runbook_execute': return workflowRunbookExecute(args);
     case 'get_screen_size':     return getScreenSize();
     case 'read_clipboard':      return readClipboard();
     case 'write_clipboard':     return writeClipboard(args);

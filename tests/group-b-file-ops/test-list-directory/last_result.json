@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T19:06:53.099Z",
-  "runStamp": "2026-05-03_150630",
+  "timestamp": "2026-05-03T19:13:52.632Z",
+  "runStamp": "2026-05-03_151330",
   "includeDangerous": false,
   "testFile": "group-b-file-ops/test-list-directory/test.js",
   "id": "group-b-file-ops/test-list-directory",
   "status": "pass",
-  "durationMs": 29,
+  "durationMs": 17,
   "notes": "list_directory: flat list, filter, recursive, and error case all pass",
   "details": {
     "count": 3,

@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-05-03T19:15:04.944Z",
+  "runStamp": "2026-05-03_151330",
+  "includeDangerous": false,
+  "testFile": "group-n-workflows/test.js",
+  "id": "group-n-workflows",
+  "status": "pass",
+  "durationMs": 16681,
+  "notes": "workflow happy path passed; workflow continueOnError path passed; workflow stopOnFail path passed; workflow recursion guard passed; continuous_mcp_improvement prompt listed",
+  "details": {
+    "runbookTool": true,
+    "promptAdded": true
+  }
+}

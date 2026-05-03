@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T19:07:50.592Z",
-  "runStamp": "2026-05-03_150630",
+  "timestamp": "2026-05-03T19:14:48.257Z",
+  "runStamp": "2026-05-03_151330",
   "includeDangerous": false,
   "testFile": "group-m-contracts/test.js",
   "id": "group-m-contracts",
   "status": "pass",
-  "durationMs": 4310,
+  "durationMs": 5581,
   "notes": "write_file required-arg validation envelope passed; enum validation check passed; additionalProperties enforcement passed; success structured envelope passed; image metadata envelope passed; unknown tool envelope passed",
   "details": {
     "checks": 6
