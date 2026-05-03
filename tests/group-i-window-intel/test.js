@@ -15,6 +15,20 @@ module.exports = {
     assert(typeof first.x === 'number', 'Expected window x number');
     assert(typeof first.width === 'number', 'Expected window width number');
     assert(['normal', 'minimized', 'maximized'].includes(first.state), `Unexpected state: ${first.state}`);
+    assert(typeof first.hwnd === 'string' && first.hwnd.length > 0, 'Expected hwnd string on detailed window row');
+
+    // selector parity checks for window control tools (prefer pid/hwnd for reliability)
+    const focusByPid = await client.callTool('focus_window', { pid: first.pid });
+    assert(focusByPid.ok, `focus_window by pid failed: ${focusByPid.error || focusByPid.text}`);
+
+    const minRestore = await client.callTool('minimize_maximize_window', { pid: first.pid, action: 'restore' });
+    assert(minRestore.ok, `minimize_maximize_window restore by pid failed: ${minRestore.error || minRestore.text}`);
+
+    const moveNoopByHwnd = await client.callTool('move_resize_window', { hwnd: first.hwnd });
+    assert(moveNoopByHwnd.ok, `move_resize_window by hwnd failed: ${moveNoopByHwnd.error || moveNoopByHwnd.text}`);
+
+    const closeBadPid = await client.callTool('close_window', { pid: 999999 });
+    assert(!closeBadPid.ok, 'close_window should fail for unknown pid');
 
     // get_focused_app_state — should return the currently focused window
     const focused = await client.callTool('get_focused_app_state', {});
@@ -37,7 +51,7 @@ module.exports = {
     assert(typeof node.pid === 'number', 'Expected pid number');
 
     return {
-      notes: 'Window intelligence tools returned expected structures',
+      notes: 'Window intelligence tools returned expected structures and selector parity checks passed',
       details: {
         visibleWindows: wins.length,
         focusedTitle: focused.json.title,

@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T17:09:16.931Z",
-  "runStamp": "2026-05-03_130912",
+  "timestamp": "2026-05-03T17:14:36.604Z",
+  "runStamp": "2026-05-03_131430",
   "includeDangerous": false,
   "testFile": "group-a-telemetry/test-get-open-ports/test.js",
   "id": "group-a-telemetry/test-get-open-ports",
   "status": "pass",
-  "durationMs": 4284,
+  "durationMs": 6068,
   "notes": "Open ports shape verified",
   "details": {
     "count": 37

@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T17:09:31.485Z",
-  "runStamp": "2026-05-03_130912",
+  "timestamp": "2026-05-03T17:14:50.669Z",
+  "runStamp": "2026-05-03_131430",
   "includeDangerous": false,
   "testFile": "group-e-control-state/test-control-state-transitions/test.js",
   "id": "group-e-control-state/test-control-state-transitions",
   "status": "pass",
-  "durationMs": 5,
+  "durationMs": 6,
   "notes": "Control state transitions behaved as expected",
   "details": null
 }

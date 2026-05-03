@@ -716,19 +716,71 @@ Get-Process |
   return tryJson(psRun(script));
 }
 
+function normalizeWindowSelectorArgs(args) {
+  const hasPid = args && args.pid != null;
+  const hasHwnd = args && args.hwnd != null && String(args.hwnd).trim() !== '';
+  const hasTitle = args && args.title != null && String(args.title).trim() !== '';
+
+  if (!hasPid && !hasHwnd && !hasTitle) {
+    throw new Error('one of pid, hwnd, or title is required');
+  }
+
+  let pid = null;
+  if (hasPid) {
+    pid = parseInt(args.pid, 10);
+    if (!Number.isFinite(pid) || pid <= 0) throw new Error('pid must be a positive integer');
+  }
+
+  const hwnd = hasHwnd ? String(args.hwnd).trim() : '';
+  const title = hasTitle ? String(args.title).trim() : '';
+
+  return { pid, hwnd, title };
+}
+
+function buildWindowResolvePs(selector) {
+  const escTitle = selector.title ? selector.title.replace(/'/g, "''") : '';
+  const escHwnd = selector.hwnd ? selector.hwnd.replace(/'/g, "''") : '';
+  const pidBool = selector.pid != null ? '$true' : '$false';
+  const pidLit = selector.pid != null ? String(selector.pid) : '0';
+
+  return `
+$proc = $null
+$matchedBy = $null
+if (${pidBool}) {
+  $proc = Get-Process -Id ${pidLit} -ErrorAction SilentlyContinue |
+    Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero } |
+    Select-Object -First 1
+  if ($proc) { $matchedBy = 'pid' }
+}
+if (-not $proc -and '${escHwnd}' -ne '') {
+  try {
+    $targetHwnd = [IntPtr]([Int64]'${escHwnd}')
+    $proc = Get-Process | Where-Object { $_.MainWindowHandle -eq $targetHwnd } | Select-Object -First 1
+    if ($proc) { $matchedBy = 'hwnd' }
+  } catch {}
+}
+if (-not $proc -and '${escTitle}' -ne '') {
+  $proc = Get-Process | Where-Object {
+    $_.MainWindowHandle -ne [IntPtr]::Zero -and $_.MainWindowTitle -like '*${escTitle}*'
+  } | Select-Object -First 1
+  if ($proc) { $matchedBy = 'title' }
+}
+if (-not $proc) {
+  throw "No window found for pid=${selector.pid != null ? selector.pid : 'null'}, hwnd=${escHwnd || '<none>'}, title=${escTitle || '<none>'}"
+}`;
+}
+
 async function focusWindow(args) {
   checkInputAllowed();
-  if (!args.title) throw new Error('title required');
+  const selector = normalizeWindowSelectorArgs(args);
   await maybeAnnounceAction('focus_window', args);
-  const title = args.title.replace(/'/g, "''");
   const script = `
 ${PS_WINFOCUS}
-$proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
-if (-not $proc) { throw "No window found matching: ${title}" }
+${buildWindowResolvePs(selector)}
 [WinFocus]::ShowWindow($proc.MainWindowHandle, 9) | Out-Null
 Start-Sleep -Milliseconds 100
 [WinFocus]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null
-"focused: $($proc.MainWindowTitle)"`;
+"focused[$matchedBy]: $($proc.MainWindowTitle)"`;
   return psRun(script);
 }
 
@@ -756,14 +808,12 @@ $proc = Get-Process -Id $pid2 -ErrorAction SilentlyContinue
 
 async function closeWindow(args) {
   checkInputAllowed();
-  if (!args.title) throw new Error('title required');
+  const selector = normalizeWindowSelectorArgs(args);
   await maybeAnnounceAction('close_window', args);
-  const title = args.title.replace(/'/g, "''");
   const script = `
-$proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
-if (-not $proc) { throw "No window found matching: ${title}" }
+${buildWindowResolvePs(selector)}
 $ok = $proc.CloseMainWindow()
-"CloseMainWindow=$ok  window='$($proc.MainWindowTitle)'"`;
+"CloseMainWindow=$ok matchedBy=$matchedBy window='$($proc.MainWindowTitle)'"`;
   return psRun(script);
 }
 
@@ -1112,40 +1162,13 @@ $result | ConvertTo-Json -Depth 3 -Compress`;
 
 async function moveResizeWindow(args) {
   checkInputAllowed();
-  if (!args.title) throw new Error('title required');
+  const selector = normalizeWindowSelectorArgs(args);
   await maybeAnnounceAction('move_resize_window', args);
-  const title = args.title.replace(/'/g, "''");
   const xArg    = Number.isFinite(args.x)      ? args.x      : null;
   const yArg    = Number.isFinite(args.y)       ? args.y      : null;
   const wArg    = Number.isFinite(args.width)   ? args.width  : null;
   const hArg    = Number.isFinite(args.height)  ? args.height : null;
-  const script = `
-Add-Type -TypeDefinition @'
-using System;
-using System.Runtime.InteropServices;
-public class WinMove {
-    [StructLayout(LayoutKind.Sequential)]
-    public struct RECT { public int Left, Top, Right, Bottom; }
-    [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr h, int x, int y, int w, int h, bool repaint);
-    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
-    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
-}
-'@ -ErrorAction SilentlyContinue
-$proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
-if (-not $proc) { throw "No window found matching: ${title}" }
-# Restore if minimized/maximized first
-[WinMove]::ShowWindow($proc.MainWindowHandle, 9) | Out-Null
-Start-Sleep -Milliseconds 80
-$rect = New-Object WinMove+RECT
-[WinMove]::GetWindowRect($proc.MainWindowHandle, [ref]$rect) | Out-Null
-$nx = if (${xArg ?? 'null'} -ne $null) { ${xArg ?? '$rect.Left'} } else { $rect.Left }
-$ny = if (${yArg ?? 'null'} -ne $null) { ${yArg ?? '$rect.Top'} } else { $rect.Top }
-$nw = if (${wArg ?? 'null'} -ne $null) { ${wArg ?? '1'} } else { $rect.Right - $rect.Left }
-$nh = if (${hArg ?? 'null'} -ne $null) { ${hArg ?? '1'} } else { $rect.Bottom - $rect.Top }
-[WinMove]::MoveWindow($proc.MainWindowHandle, $nx, $ny, $nw, $nh, $true) | Out-Null
-"moved: $($proc.MainWindowTitle) → x=$nx y=$ny w=$nw h=$nh"`;
-
-  // Build cleaner PS without JS null coalescing confusion
+  // Build PowerShell once with stable selector resolution.
   const nx = xArg !== null ? String(xArg) : '$rect.Left';
   const ny = yArg !== null ? String(yArg) : '$rect.Top';
   const nw = wArg !== null ? String(wArg) : '($rect.Right - $rect.Left)';
@@ -1162,34 +1185,31 @@ public class WinMove2 {
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
 }
 '@ -ErrorAction SilentlyContinue
-$proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
-if (-not $proc) { throw "No window found matching: ${title}" }
+${buildWindowResolvePs(selector)}
 [WinMove2]::ShowWindow($proc.MainWindowHandle, 9) | Out-Null
 Start-Sleep -Milliseconds 80
 $rect = New-Object WinMove2+RECT
 [WinMove2]::GetWindowRect($proc.MainWindowHandle, [ref]$rect) | Out-Null
 $nx = ${nx}; $ny = ${ny}; $nw = ${nw}; $nh = ${nh}
 [WinMove2]::MoveWindow($proc.MainWindowHandle, $nx, $ny, $nw, $nh, $true) | Out-Null
-"moved: $($proc.MainWindowTitle) to x=$nx y=$ny w=$nw h=$nh"`;
+"moved[$matchedBy]: $($proc.MainWindowTitle) to x=$nx y=$ny w=$nw h=$nh"`;
   return psRun(ps, 10000);
 }
 
 async function minimizeMaximizeWindow(args) {
   checkInputAllowed();
-  if (!args.title) throw new Error('title required');
+  const selector = normalizeWindowSelectorArgs(args);
   const action = (args.action || 'minimize').toLowerCase();
   if (!['minimize', 'maximize', 'restore'].includes(action)) throw new Error('action must be minimize, maximize, or restore');
   await maybeAnnounceAction('minimize_maximize_window', args);
-  const title = args.title.replace(/'/g, "''");
   // SW_MINIMIZE=6, SW_MAXIMIZE=3, SW_RESTORE=9
   const cmdMap = { minimize: 6, maximize: 3, restore: 9 };
   const swCmd = cmdMap[action];
   const ps = `
 ${PS_WINFOCUS}
-$proc = Get-Process | Where-Object { $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1
-if (-not $proc) { throw "No window found matching: ${title}" }
+${buildWindowResolvePs(selector)}
 [WinFocus]::ShowWindow($proc.MainWindowHandle, ${swCmd}) | Out-Null
-"${action}: $($proc.MainWindowTitle)"`;
+"${action}[$matchedBy]: $($proc.MainWindowTitle)"`;
   return psRun(ps, 8000);
 }
 
@@ -1649,29 +1669,31 @@ const TOOLS = [
   },
   {
     name: 'move_resize_window',
-    description: 'Move and/or resize a window by title. Omit any of x/y/width/height to keep that dimension unchanged.',
+    description: 'Move and/or resize a window by pid, hwnd, or title. Omit any of x/y/width/height to keep that dimension unchanged.',
     inputSchema: {
       type: 'object',
       properties: {
+        pid:    { type: 'number', description: 'Target window process ID (preferred for reliability)' },
+        hwnd:   { type: 'string', description: 'Target window handle as decimal string' },
         title:  { type: 'string', description: 'Substring of the window title to match' },
         x:      { type: 'number', description: 'New left edge (pixels)' },
         y:      { type: 'number', description: 'New top edge (pixels)' },
         width:  { type: 'number', description: 'New window width (pixels)' },
         height: { type: 'number', description: 'New window height (pixels)' },
       },
-      required: ['title'],
     },
   },
   {
     name: 'minimize_maximize_window',
-    description: 'Minimize, maximize, or restore a window by title.',
+    description: 'Minimize, maximize, or restore a window by pid, hwnd, or title.',
     inputSchema: {
       type: 'object',
       properties: {
+        pid:    { type: 'number', description: 'Target window process ID (preferred for reliability)' },
+        hwnd:   { type: 'string', description: 'Target window handle as decimal string' },
         title:  { type: 'string', description: 'Substring of the window title to match' },
         action: { type: 'string', enum: ['minimize', 'maximize', 'restore'], description: 'Action to perform (default: minimize)' },
       },
-      required: ['title'],
     },
   },
   {
@@ -1965,13 +1987,14 @@ const TOOLS = [
   },
   {
     name: 'focus_window',
-    description: 'Bring a window to the foreground by matching its title (partial, case-insensitive).',
+    description: 'Bring a window to the foreground by pid, hwnd, or title (partial, case-insensitive).',
     inputSchema: {
       type: 'object',
       properties: {
+        pid:   { type: 'number', description: 'Target window process ID (preferred for reliability)' },
+        hwnd:  { type: 'string', description: 'Target window handle as decimal string' },
         title: { type: 'string', description: 'Partial window title to match' },
       },
-      required: ['title'],
     },
   },
   {
@@ -1981,13 +2004,14 @@ const TOOLS = [
   },
   {
     name: 'close_window',
-    description: 'Send a graceful close (WM_CLOSE) to a window matched by title. The app may prompt to save.',
+    description: 'Send a graceful close (WM_CLOSE) to a window matched by pid, hwnd, or title. The app may prompt to save.',
     inputSchema: {
       type: 'object',
       properties: {
+        pid:   { type: 'number', description: 'Target window process ID (preferred for reliability)' },
+        hwnd:  { type: 'string', description: 'Target window handle as decimal string' },
         title: { type: 'string', description: 'Partial window title to match' },
       },
-      required: ['title'],
     },
   },
   // ── Shell ─────────────────────────────────────────────────────────────────

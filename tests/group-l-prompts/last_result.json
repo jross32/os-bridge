@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T17:09:09.662Z",
-  "runStamp": "2026-05-03_130806",
+  "timestamp": "2026-05-03T17:15:39.836Z",
+  "runStamp": "2026-05-03_131430",
   "includeDangerous": false,
   "testFile": "group-l-prompts/test.js",
   "id": "group-l-prompts",
   "status": "pass",
-  "durationMs": 9,
+  "durationMs": 5,
   "notes": "prompts/list: 5 prompts found; prompts/get automate_app: correct structure and interpolation; prompts/get find_memory_hogs: returned workflow message; prompts/get monitor_file: filePath interpolated correctly; prompts/get unknown: error correctly returned",
   "details": null
 }
