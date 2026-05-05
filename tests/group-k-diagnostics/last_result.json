@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-05T11:09:56.294Z",
-  "runStamp": "2026-05-05_070830",
+  "timestamp": "2026-05-05T11:40:42.530Z",
+  "runStamp": "2026-05-05_073919",
   "includeDangerous": false,
   "testFile": "group-k-diagnostics/test.js",
   "id": "group-k-diagnostics",
   "status": "pass",
-  "durationMs": 7995,
+  "durationMs": 8959,
   "notes": "check_service_status: Spooler found, status=Running; check_service_status: missing service correctly returned found=false; get_installed_software: 5 Microsoft entries found; get_startup_items: 9 startup items; get_event_log_entries: 5 Application log entries",
   "details": null
 }

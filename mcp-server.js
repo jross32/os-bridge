@@ -1991,6 +1991,430 @@ function resetEmergencyStop() {
   return { reset: true, message: 'Emergency stop cleared. Input tools are re-enabled.' };
 }
 
+function resetEmergencyStop() {
+  ctrl.emergencyStopped = false;
+  return { reset: true, message: 'Emergency stop cleared. Input tools are re-enabled.' };
+}
+
+// ── v1.0.1–v2.5.0 new tool implementations ───────────────────────────────────
+
+async function getDiskUsage(args) {
+  const driveFilter = args && args.drive ? String(args.drive).replace(/[^a-zA-Z]/g, '') : '';
+  const script = driveFilter
+    ? `Get-PSDrive -Name '${driveFilter}' -PSProvider FileSystem | Select-Object Name,@{N='UsedGB';E={[math]::Round($_.Used/1GB,2)}},@{N='FreeGB';E={[math]::Round($_.Free/1GB,2)}},@{N='TotalGB';E={[math]::Round(($_.Used+$_.Free)/1GB,2)}} | ConvertTo-Json -Depth 3`
+    : `Get-PSDrive -PSProvider FileSystem | Select-Object Name,@{N='UsedGB';E={[math]::Round($_.Used/1GB,2)}},@{N='FreeGB';E={[math]::Round($_.Free/1GB,2)}},@{N='TotalGB';E={[math]::Round(($_.Used+$_.Free)/1GB,2)}} | ConvertTo-Json -Depth 3`;
+  const raw = psRun(script);
+  const drives = tryJson(raw);
+  const list = Array.isArray(drives) ? drives : [drives];
+  return { drives: list };
+}
+
+async function pingHost(args) {
+  const host = String(args.host || '').trim();
+  if (!host) throw new Error('host is required');
+  const count = Math.min(10, Math.max(1, parseInt(args.count) || 4));
+  const raw = psRun(`Test-Connection -ComputerName '${host}' -Count ${count} -ErrorAction SilentlyContinue | Select-Object -Property Address,Latency,StatusCode | ConvertTo-Json -Depth 3`, 20000);
+  const results = tryJson(raw) || [];
+  const arr = Array.isArray(results) ? results : [results];
+  const successful = arr.filter(r => r && r.StatusCode === 0);
+  return {
+    host,
+    packetsSent: count,
+    packetsReceived: successful.length,
+    packetLoss: `${Math.round(((count - successful.length) / count) * 100)}%`,
+    avgLatencyMs: successful.length > 0 ? Math.round(successful.reduce((s, r) => s + (r.Latency || 0), 0) / successful.length) : null,
+    reachable: successful.length > 0,
+    results: arr,
+  };
+}
+
+async function getNetworkAdapters(args) {
+  const statusFilter = (args && args.status) || 'All';
+  const whereClause = statusFilter !== 'All' ? `| Where-Object { $_.Status -eq '${statusFilter}' }` : '';
+  const script = `Get-NetAdapter ${whereClause} | Select-Object Name,Status,MacAddress,LinkSpeed,@{N='IPv4';E={(Get-NetIPAddress -InterfaceIndex $_.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty IPAddress)}} | ConvertTo-Json -Depth 3`;
+  return { adapters: tryJson(psRun(script, 20000)) };
+}
+
+async function manageService(args) {
+  const name = String(args.name || '').trim();
+  const action = String(args.action || '').toLowerCase();
+  if (!name) throw new Error('name is required');
+  if (!['start','stop','restart'].includes(action)) throw new Error('action must be start, stop, or restart');
+  const cmd = action === 'restart' ? `Restart-Service -Name '${name}' -Force` : action === 'start' ? `Start-Service -Name '${name}'` : `Stop-Service -Name '${name}' -Force`;
+  psRun(`${cmd}; Get-Service -Name '${name}' | Select-Object Name,Status,DisplayName | ConvertTo-Json`);
+  const status = tryJson(psRun(`Get-Service -Name '${name}' | Select-Object Name,Status,DisplayName | ConvertTo-Json`));
+  return { action, service: name, result: status };
+}
+
+async function getBatteryStatus() {
+  const raw = psRun(`Get-WmiObject Win32_Battery -ErrorAction SilentlyContinue | Select-Object Name,EstimatedChargeRemaining,BatteryStatus,EstimatedRunTime,DesignCapacity,FullChargeCapacity | ConvertTo-Json -Depth 3`);
+  if (!raw || raw.trim() === '') return { hasBattery: false, message: 'No battery detected (desktop or no WMI data)' };
+  const data = tryJson(raw);
+  const batt = Array.isArray(data) ? data[0] : data;
+  const statusMap = { 1: 'Other', 2: 'Unknown', 3: 'Fully Charged', 4: 'Low', 5: 'Critical', 6: 'Charging', 7: 'Charging & High', 8: 'Charging & Low', 9: 'Charging & Critical', 10: 'Undefined', 11: 'Partially Charged' };
+  return {
+    hasBattery: true,
+    name: batt.Name,
+    chargePercent: batt.EstimatedChargeRemaining,
+    status: statusMap[batt.BatteryStatus] || String(batt.BatteryStatus),
+    estimatedRunTimeMin: batt.EstimatedRunTime === 71582788 ? null : batt.EstimatedRunTime,
+  };
+}
+
+async function getWifiNetworks() {
+  const raw = psRun(`netsh wlan show networks mode=bssid`, 20000);
+  const networks = [];
+  let current = null;
+  for (const line of raw.split('\n')) {
+    const ssidMatch = line.match(/^SSID\s+\d+\s*:\s*(.+)/);
+    const signalMatch = line.match(/Signal\s*:\s*(\d+)%/);
+    const securityMatch = line.match(/Authentication\s*:\s*(.+)/);
+    if (ssidMatch) {
+      if (current) networks.push(current);
+      current = { ssid: ssidMatch[1].trim(), signal: null, security: null };
+    } else if (current && signalMatch) {
+      current.signal = parseInt(signalMatch[1]);
+    } else if (current && securityMatch) {
+      current.security = securityMatch[1].trim();
+    }
+  }
+  if (current) networks.push(current);
+  return { networks: networks.slice(0, 50) };
+}
+
+async function findInFiles(args) {
+  const dir = String(args.dir || '').trim();
+  const pattern = String(args.pattern || '').trim();
+  if (!dir) throw new Error('dir is required');
+  if (!pattern) throw new Error('pattern is required');
+  const ext = args.extension ? String(args.extension) : '';
+  const ignoreCase = args.ignoreCase !== false;
+  const maxResults = Math.min(200, parseInt(args.maxResults) || 50);
+  const includeFilter = ext ? `*${ext}` : '*.*';
+  const casePart = ignoreCase ? '-CaseSensitive:$false' : '';
+  const raw = psRun(`Select-String -Path '${dir.replace(/'/g, "''")}' -Filter '${includeFilter}' -Pattern '${pattern.replace(/'/g, "''")}' -Recurse ${casePart} -ErrorAction SilentlyContinue | Select-Object -First ${maxResults} | ForEach-Object { [PSCustomObject]@{file=$_.Filename;path=$_.Path;line=$_.LineNumber;match=$_.Line.Trim()} } | ConvertTo-Json -Depth 3`, 30000);
+  return { results: tryJson(raw) || [], maxResults };
+}
+
+async function getDisplayInfo() {
+  const raw = psRun(`Get-CimInstance Win32_VideoController | Select-Object Name,CurrentHorizontalResolution,CurrentVerticalResolution,CurrentRefreshRate,AdapterRAM,Status | ConvertTo-Json -Depth 3`);
+  const data = tryJson(raw) || [];
+  const arr = Array.isArray(data) ? data : [data];
+  return { displays: arr.map(d => ({ name: d.Name, widthPx: d.CurrentHorizontalResolution, heightPx: d.CurrentVerticalResolution, refreshRateHz: d.CurrentRefreshRate, vramGB: d.AdapterRAM ? Math.round(d.AdapterRAM / 1073741824 * 100) / 100 : null, status: d.Status })) };
+}
+
+async function processSnapshot(args) {
+  const filter = args && args.filter ? String(args.filter).toLowerCase() : '';
+  const limit = Math.min(500, parseInt((args && args.limit) || 100));
+  const raw = psRun(`Get-Process | Select-Object Id,ProcessName,CPU,@{N='MemMB';E={[math]::Round($_.WorkingSet64/1MB,1)}},Responding,@{N='StartTime';E={if($_.StartTime){$_.StartTime.ToString('o')}else{''}}} | ConvertTo-Json -Depth 3`, 20000);
+  let procs = tryJson(raw) || [];
+  if (!Array.isArray(procs)) procs = [procs];
+  if (filter) procs = procs.filter(p => p.ProcessName && p.ProcessName.toLowerCase().includes(filter));
+  return { snapshot: procs.slice(0, limit), total: procs.length, timestamp: new Date().toISOString() };
+}
+
+async function getUserSessions() {
+  const raw = psRun(`query user 2>&1`, 10000);
+  const lines = raw.split('\n').filter(l => l.trim());
+  const sessions = lines.slice(1).map(l => {
+    const parts = l.trim().split(/\s{2,}/);
+    return { username: parts[0], session: parts[1], id: parts[2], state: parts[3], idleTime: parts[4], logonTime: parts[5] };
+  });
+  return { sessions };
+}
+
+async function getTempFiles(args) {
+  const olderThanDays = parseInt((args && args.olderThanDays) || 0);
+  const ext = args && args.extension ? String(args.extension) : '';
+  const limit = Math.min(500, parseInt((args && args.limit) || 100));
+  const tempPaths = [process.env.TEMP || 'C:\\Windows\\Temp', 'C:\\Windows\\Temp'].filter((v, i, a) => a.indexOf(v) === i);
+  const cutoff = olderThanDays > 0 ? `(Get-Date).AddDays(-${olderThanDays})` : '$null';
+  const extFilter = ext ? `-Filter '*${ext}'` : '';
+  const whereClause = olderThanDays > 0 ? `| Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-${olderThanDays}) }` : '';
+  const script = tempPaths.map(p => `Get-ChildItem -Path '${p}' -File ${extFilter} -ErrorAction SilentlyContinue ${whereClause} | Select-Object -First ${Math.ceil(limit / tempPaths.length)} | Select-Object Name,@{N='SizeKB';E={[math]::Round($_.Length/1KB,1)}},LastWriteTime,FullName`).join('; ');
+  const raw = psRun(`${script} | ConvertTo-Json -Depth 3`, 20000);
+  const items = tryJson(raw) || [];
+  return { files: (Array.isArray(items) ? items : [items]).slice(0, limit) };
+}
+
+async function getFirewallRules(args) {
+  const direction = (args && args.direction) || 'All';
+  const filter = (args && args.filter) || '';
+  const limit = Math.min(200, parseInt((args && args.limit) || 50));
+  const dirClause = direction !== 'All' ? `-Direction ${direction}` : '';
+  const raw = psRun(`Get-NetFirewallRule -Enabled True ${dirClause} -ErrorAction SilentlyContinue | Select-Object -First 200 | Select-Object DisplayName,Direction,Action,Profile,@{N='Protocol';E={(Get-NetFirewallPortFilter -AssociatedNetFirewallRule $_ -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Protocol)}},@{N='LocalPort';E={(Get-NetFirewallPortFilter -AssociatedNetFirewallRule $_ -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty LocalPort)}} | ConvertTo-Json -Depth 3`, 30000);
+  let rules = tryJson(raw) || [];
+  if (!Array.isArray(rules)) rules = [rules];
+  if (filter) rules = rules.filter(r => r.DisplayName && r.DisplayName.toLowerCase().includes(filter.toLowerCase()));
+  return { rules: rules.slice(0, limit), total: rules.length };
+}
+
+async function getHotkeys() {
+  const script = `Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\AppKey' -ErrorAction SilentlyContinue | ConvertTo-Json -Depth 2`;
+  const raw = psRun(script, 10000);
+  return { hotkeys: tryJson(raw), note: 'User-defined AppKey hotkeys from registry' };
+}
+
+async function getRecentFiles(args) {
+  const limit = Math.min(100, parseInt((args && args.limit) || 20));
+  const recentPath = path.join(process.env.APPDATA || 'C:\\Users\\Default\\AppData\\Roaming', 'Microsoft\\Windows\\Recent');
+  const raw = psRun(`Get-ChildItem -Path '${recentPath}' -File -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First ${limit} | Select-Object Name,@{N='SizeKB';E={[math]::Round($_.Length/1KB,1)}},LastWriteTime | ConvertTo-Json -Depth 3`);
+  return { files: tryJson(raw) || [] };
+}
+
+async function systemHealthCheck() {
+  const [sysInfo, procs, events] = await Promise.all([
+    getSystemInfo().catch(e => ({ error: e.message })),
+    getProcesses({ limit: 10, sortBy: 'memory' }).catch(e => ({ error: e.message })),
+    getEventLogEntries({ logName: 'System', level: 'Error', limit: 5 }).catch(e => ({ error: e.message })),
+  ]);
+  const diskWarnings = [];
+  if (sysInfo && sysInfo.disks) {
+    sysInfo.disks.forEach(d => { if (d.freePercent < 10) diskWarnings.push(`${d.drive}: only ${d.freePercent}% free`); });
+  }
+  return {
+    timestamp: new Date().toISOString(),
+    systemInfo: sysInfo,
+    topProcesses: procs,
+    recentErrors: events,
+    warnings: diskWarnings,
+    healthy: diskWarnings.length === 0 && (!events || !events.entries || events.entries.length === 0),
+  };
+}
+
+async function getScheduledTasks(args) {
+  const filter = (args && args.filter) || '';
+  const status = (args && args.status) || 'All';
+  const limit = Math.min(200, parseInt((args && args.limit) || 50));
+  const stateClause = status !== 'All' ? `| Where-Object { $_.State -eq '${status}' }` : '';
+  const raw = psRun(`Get-ScheduledTask ${stateClause} -ErrorAction SilentlyContinue | Select-Object TaskName,TaskPath,State,@{N='LastRunTime';E={$_.LastRunTime}},@{N='NextRunTime';E={$_.NextRunTime}} | ConvertTo-Json -Depth 3`, 20000);
+  let tasks = tryJson(raw) || [];
+  if (!Array.isArray(tasks)) tasks = [tasks];
+  if (filter) tasks = tasks.filter(t => t.TaskName && t.TaskName.toLowerCase().includes(filter.toLowerCase()));
+  return { tasks: tasks.slice(0, limit), total: tasks.length };
+}
+
+async function getUsbDevices() {
+  const raw = psRun(`Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.Class -like '*USB*' -or $_.InstanceId -like 'USB\\*' } | Select-Object FriendlyName,InstanceId,Status,Class | ConvertTo-Json -Depth 3`, 15000);
+  return { devices: tryJson(raw) || [] };
+}
+
+function cpuBenchmark(args) {
+  const durationMs = Math.min(5000, Math.max(100, parseInt((args && args.durationMs) || 500)));
+  const start = Date.now();
+  let ops = 0;
+  while (Date.now() - start < durationMs) {
+    for (let i = 0; i < 100000; i++) { ops += Math.sqrt(i) * 1.337; }
+    ops++;
+  }
+  const elapsed = Date.now() - start;
+  const mops = Math.round((ops / 1e6) / (elapsed / 1000) * 10) / 10;
+  return { durationMs: elapsed, operationsMillions: Math.round(ops / 1e6), mops, score: Math.round(mops * 10) };
+}
+
+async function memoryPressureReport() {
+  const raw = psRun(`$os = Get-CimInstance Win32_OperatingSystem; [PSCustomObject]@{totalGB=[math]::Round($os.TotalVisibleMemorySize/1MB,2);freeGB=[math]::Round($os.FreePhysicalMemory/1MB,2);usedGB=[math]::Round(($os.TotalVisibleMemorySize-$os.FreePhysicalMemory)/1MB,2);usedPct=[math]::Round(($os.TotalVisibleMemorySize-$os.FreePhysicalMemory)/$os.TotalVisibleMemorySize*100,1)} | ConvertTo-Json`);
+  const mem = tryJson(raw) || {};
+  const topProcs = tryJson(psRun(`Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 | Select-Object ProcessName,Id,@{N='MemMB';E={[math]::Round($_.WorkingSet64/1MB,1)}} | ConvertTo-Json -Depth 3`));
+  return { memory: mem, topProcessesByMemory: topProcs || [], pressure: mem.usedPct > 90 ? 'critical' : mem.usedPct > 75 ? 'high' : mem.usedPct > 50 ? 'medium' : 'low' };
+}
+
+async function getWindowsVersion() {
+  const raw = psRun(`[PSCustomObject]@{Caption=(Get-CimInstance Win32_OperatingSystem).Caption;Version=(Get-CimInstance Win32_OperatingSystem).Version;BuildNumber=(Get-CimInstance Win32_OperatingSystem).BuildNumber;Architecture=(Get-CimInstance Win32_OperatingSystem).OSArchitecture;Edition=(Get-WindowsEdition -Online -ErrorAction SilentlyContinue).Edition} | ConvertTo-Json`, 15000);
+  return tryJson(raw) || {};
+}
+
+async function checkPortOpen(args) {
+  const host = String(args.host || '').trim();
+  const port = parseInt(args.port);
+  const timeoutMs = Math.min(10000, parseInt(args.timeoutMs) || 3000);
+  if (!host) throw new Error('host is required');
+  if (!port) throw new Error('port is required');
+  const raw = psRun(`$r = Test-NetConnection -ComputerName '${host}' -Port ${port} -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue 2>&1; if($r -eq $true){'open'}else{'closed'}`, timeoutMs + 2000);
+  return { host, port, open: raw.trim() === 'open' };
+}
+
+async function listShares() {
+  const raw = psRun(`Get-SmbShare -ErrorAction SilentlyContinue | Select-Object Name,Path,Description,ShareType | ConvertTo-Json -Depth 3`, 10000);
+  return { shares: tryJson(raw) || [] };
+}
+
+async function fileInfo(args) {
+  const fp = String(args.filePath || '').trim();
+  if (!fp) throw new Error('filePath is required');
+  const algo = (args.algorithm || 'sha256').toLowerCase();
+  if (!fs.existsSync(fp)) throw new Error(`File not found: ${fp}`);
+  const stat = fs.statSync(fp);
+  const hash = crypto.createHash(algo);
+  const data = fs.readFileSync(fp);
+  hash.update(data);
+  const lineCount = data.toString('utf8').split('\n').length;
+  return {
+    path: fp,
+    name: path.basename(fp),
+    sizeBytes: stat.size,
+    sizeKB: Math.round(stat.size / 1024 * 10) / 10,
+    created: stat.birthtime,
+    modified: stat.mtime,
+    accessed: stat.atime,
+    hash: { algorithm: algo, value: hash.digest('hex') },
+    lineCount,
+  };
+}
+
+async function directorySize(args) {
+  const dir = String(args.dirPath || '').trim();
+  if (!dir) throw new Error('dirPath is required');
+  const topN = Math.min(50, parseInt(args.topN) || 10);
+  const raw = psRun(`$items = Get-ChildItem -Path '${dir.replace(/'/g,"''")}' -Recurse -File -ErrorAction SilentlyContinue; $total = ($items | Measure-Object -Property Length -Sum).Sum; $top = $items | Sort-Object Length -Descending | Select-Object -First ${topN} | Select-Object @{N='path';E={$_.FullName}},@{N='sizeKB';E={[math]::Round($_.Length/1KB,1)}}; [PSCustomObject]@{totalBytes=$total;totalMB=[math]::Round($total/1MB,2);fileCount=$items.Count;topFiles=$top} | ConvertTo-Json -Depth 4`, 60000);
+  return tryJson(raw) || {};
+}
+
+async function windowScreenshotGrid(args) {
+  const titles = args && Array.isArray(args.titles) ? args.titles : [];
+  if (titles.length === 0) throw new Error('titles array is required and must be non-empty');
+  const results = [];
+  for (const t of titles.slice(0, 10)) {
+    try {
+      const s = await screenshotWindow({ title: t });
+      results.push({ title: t, captured: true, mimeType: s.mimeType });
+    } catch (e) {
+      results.push({ title: t, captured: false, error: e.message });
+    }
+  }
+  return { screenshots: results };
+}
+
+async function bulkKillProcesses(args) {
+  const namePattern = String(args.namePattern || '').trim().toLowerCase();
+  if (!namePattern) throw new Error('namePattern is required');
+  const dryRun = args.dryRun !== false;
+  const procs = tryJson(psRun(`Get-Process | Where-Object { $_.ProcessName -like '*${namePattern.replace(/'/g,"''")}*' } | Select-Object Id,ProcessName | ConvertTo-Json -Depth 3`));
+  const list = Array.isArray(procs) ? procs : procs ? [procs] : [];
+  if (dryRun) return { dryRun: true, matched: list, message: 'Set dryRun=false to actually kill these processes' };
+  for (const p of list) {
+    try { psRun(`Stop-Process -Id ${p.Id} -Force -ErrorAction SilentlyContinue`); } catch {}
+  }
+  return { killed: list, count: list.length };
+}
+
+async function getDnsInfo(args) {
+  const hostname = String(args.hostname || '').trim();
+  if (!hostname) throw new Error('hostname is required');
+  const raw = psRun(`Resolve-DnsName '${hostname.replace(/'/g,"''")}' -ErrorAction SilentlyContinue | Select-Object Name,Type,IPAddress,NameHost,TTL | ConvertTo-Json -Depth 3`, 15000);
+  return { hostname, records: tryJson(raw) || [] };
+}
+
+async function tailFile(args) {
+  const fp = String(args.filePath || '').trim();
+  if (!fp) throw new Error('filePath is required');
+  const lines = Math.min(500, parseInt(args.lines) || 50);
+  if (!fs.existsSync(fp)) throw new Error(`File not found: ${fp}`);
+  const content = fs.readFileSync(fp, 'utf8');
+  const allLines = content.split('\n');
+  return { filePath: fp, totalLines: allLines.length, tail: allLines.slice(-lines).join('\n') };
+}
+
+async function moveFile(args) {
+  const src = String(args.source || '').trim();
+  const dst = String(args.destination || '').trim();
+  if (!src || !dst) throw new Error('source and destination are required');
+  if (!fs.existsSync(src)) throw new Error(`Source not found: ${src}`);
+  fs.renameSync(src, dst);
+  return { moved: true, source: src, destination: dst };
+}
+
+async function copyFile(args) {
+  const src = String(args.source || '').trim();
+  const dst = String(args.destination || '').trim();
+  const overwrite = Boolean(args.overwrite);
+  if (!src || !dst) throw new Error('source and destination are required');
+  if (!fs.existsSync(src)) throw new Error(`Source not found: ${src}`);
+  if (!overwrite && fs.existsSync(dst)) throw new Error(`Destination already exists: ${dst}. Set overwrite=true to replace.`);
+  fs.mkdirSync(path.dirname(dst), { recursive: true });
+  fs.copyFileSync(src, dst);
+  return { copied: true, source: src, destination: dst };
+}
+
+async function deleteFile(args) {
+  const fp = String(args.filePath || '').trim();
+  if (!fp) throw new Error('filePath is required');
+  if (!args.confirm) throw new Error('confirm must be true to delete a file');
+  if (!fs.existsSync(fp)) throw new Error(`File not found: ${fp}`);
+  const stat = fs.statSync(fp);
+  if (stat.isDirectory()) throw new Error('Cannot delete a directory — use run_command with Remove-Item -Recurse if needed');
+  fs.unlinkSync(fp);
+  return { deleted: true, filePath: fp };
+}
+
+async function createDirectory(args) {
+  const dir = String(args.dirPath || '').trim();
+  if (!dir) throw new Error('dirPath is required');
+  fs.mkdirSync(dir, { recursive: true });
+  return { created: true, dirPath: dir };
+}
+
+async function archiveExtract(args) {
+  const zip = String(args.zipPath || '').trim();
+  const dest = String(args.destination || '').trim();
+  const overwrite = Boolean(args.overwrite);
+  if (!zip || !dest) throw new Error('zipPath and destination are required');
+  if (!fs.existsSync(zip)) throw new Error(`ZIP not found: ${zip}`);
+  fs.mkdirSync(dest, { recursive: true });
+  const raw = psRun(`Expand-Archive -Path '${zip.replace(/'/g,"''")}' -DestinationPath '${dest.replace(/'/g,"''")}' ${overwrite ? '-Force' : ''} -ErrorAction Stop; 'ok'`);
+  return { extracted: raw.trim() === 'ok' || raw.includes('ok'), destination: dest };
+}
+
+async function whoamiInfo() {
+  const raw = psRun(`[PSCustomObject]@{user=$env:USERNAME;domain=$env:USERDOMAIN;computer=$env:COMPUTERNAME;isAdmin=([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)} | ConvertTo-Json`);
+  return tryJson(raw) || {};
+}
+
+async function getClipboardHistory() {
+  const raw = psRun(`try { $h = Get-Clipboard -TextFormatType Text; $h | Select-Object -First 20 | ConvertTo-Json } catch { '"Clipboard history unavailable or disabled"' }`, 5000);
+  return { history: tryJson(raw), note: 'Windows Clipboard History must be enabled (Win+V)' };
+}
+
+async function getUptimeDetailed() {
+  const raw = psRun(`$boot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime; $now = Get-Date; $span = $now - $boot; [PSCustomObject]@{bootTime=$boot.ToString('o');currentTime=$now.ToString('o');uptimeDays=[math]::Floor($span.TotalDays);uptimeHours=$span.Hours;uptimeMinutes=$span.Minutes;uptimeSeconds=$span.Seconds;totalUptimeHours=[math]::Round($span.TotalHours,2)} | ConvertTo-Json`);
+  return tryJson(raw) || {};
+}
+
+async function listFonts(args) {
+  const filter = (args && args.filter) || '';
+  const limit = Math.min(1000, parseInt((args && args.limit) || 100));
+  const raw = psRun(`(Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts' -ErrorAction SilentlyContinue).PSObject.Properties | Select-Object Name,Value | ConvertTo-Json -Depth 3`);
+  let fonts = tryJson(raw) || [];
+  if (!Array.isArray(fonts)) fonts = [fonts];
+  if (filter) fonts = fonts.filter(f => f.Name && f.Name.toLowerCase().includes(filter.toLowerCase()));
+  return { fonts: fonts.slice(0, limit), total: fonts.length };
+}
+
+async function getPowerPlan() {
+  const raw = psRun(`powercfg /list 2>&1`);
+  const lines = raw.split('\n').filter(l => l.includes('Power Scheme'));
+  const plans = lines.map(l => {
+    const activeMatch = l.match(/\*$/);
+    const guidMatch = l.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    const nameMatch = l.match(/\((.+?)\)/);
+    return { guid: guidMatch ? guidMatch[1] : null, name: nameMatch ? nameMatch[1] : l.trim(), active: Boolean(activeMatch) };
+  });
+  return { plans, active: plans.find(p => p.active) || null };
+}
+
+function osBridgeMeta() {
+  return {
+    name: 'os-bridge',
+    version: SERVER_VERSION,
+    toolCount: TOOLS.length,
+    platform: process.platform,
+    arch: process.arch,
+    nodeVersion: process.version,
+    uptime: process.uptime(),
+    capabilities: ['system_info', 'process_management', 'file_operations', 'network_tools', 'mouse_keyboard', 'windows_automation', 'shell_sessions', 'screenshots', 'clipboard', 'diagnostics'],
+  };
+}
+
 // ── Tool definitions ──────────────────────────────────────────────────────────
 const TOOLS = [
   // ── System info ──────────────────────────────────────────────────────────
@@ -2636,6 +3060,337 @@ const TOOLS = [
     description: 'Clear the emergency stop flag and re-enable AI input tools.',
     inputSchema: { type: 'object', properties: {} },
   },
+  // ── v1.0.1–v2.5.0 new tools ──────────────────────────────────────────────
+  {
+    name: 'get_disk_usage',
+    description: 'Get disk space usage per drive (total, used, free in GB) plus overall summary.',
+    inputSchema: { type: 'object', properties: { drive: { type: 'string', description: 'Optional specific drive letter (e.g. "C"). Default: all drives.' } } },
+  },
+  {
+    name: 'ping_host',
+    description: 'Ping a hostname or IP address and return latency, packet loss, and reachability.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        host:  { type: 'string', description: 'Hostname or IP address to ping' },
+        count: { type: 'number', description: 'Number of ping packets (default: 4, max: 10)' },
+      },
+      required: ['host'],
+    },
+  },
+  {
+    name: 'get_network_adapters',
+    description: 'List network adapters with name, status, MAC address, and IP addresses.',
+    inputSchema: { type: 'object', properties: { status: { type: 'string', enum: ['Up', 'Down', 'All'], description: 'Filter by adapter status (default: All)' } } },
+  },
+  {
+    name: 'manage_service',
+    description: 'Start, stop, or restart a Windows service.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name:   { type: 'string', description: 'Windows service short name (e.g. "Spooler")' },
+        action: { type: 'string', enum: ['start', 'stop', 'restart'], description: 'Action to perform' },
+      },
+      required: ['name', 'action'],
+    },
+  },
+  {
+    name: 'get_battery_status',
+    description: 'Get battery charge level, status (charging/discharging/AC), and estimated time remaining.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_wifi_networks',
+    description: 'List available Wi-Fi networks with SSID, signal strength, and security type.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'find_in_files',
+    description: 'Recursively search files under a directory for lines matching a text or regex pattern.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dir:        { type: 'string', description: 'Root directory to search' },
+        pattern:    { type: 'string', description: 'Text or regex pattern to search for' },
+        extension:  { type: 'string', description: 'Optional file extension filter (e.g. ".js")' },
+        ignoreCase: { type: 'boolean', description: 'Case-insensitive search (default: true)' },
+        maxResults: { type: 'number', description: 'Max results to return (default: 50, max: 200)' },
+      },
+      required: ['dir', 'pattern'],
+    },
+  },
+  {
+    name: 'get_display_info',
+    description: 'Get display adapter info including name, resolution, refresh rate, and VRAM.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'process_snapshot',
+    description: 'Take a point-in-time snapshot of all running processes with CPU, memory, PID, and status.',
+    inputSchema: { type: 'object', properties: { filter: { type: 'string', description: 'Optional name filter' }, limit: { type: 'number', description: 'Max processes (default 100)' } } },
+  },
+  {
+    name: 'get_user_sessions',
+    description: 'List currently logged-in Windows user sessions.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_temp_files',
+    description: 'List temporary files in %TEMP% and Windows Temp, optionally filtered by age or extension.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        olderThanDays: { type: 'number', description: 'Only show files older than N days (default: 0 = all)' },
+        extension:     { type: 'string', description: 'Optional file extension filter' },
+        limit:         { type: 'number', description: 'Max files to return (default 100)' },
+      },
+    },
+  },
+  {
+    name: 'get_firewall_rules',
+    description: 'List Windows Firewall rules (name, direction, action, protocol, port).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        direction: { type: 'string', enum: ['Inbound', 'Outbound', 'All'], description: 'Filter direction (default: All)' },
+        filter:    { type: 'string', description: 'Optional name filter substring' },
+        limit:     { type: 'number', description: 'Max results (default: 50)' },
+      },
+    },
+  },
+  {
+    name: 'get_hotkeys',
+    description: 'List global hotkeys registered on the system (via registry and common shortcuts).',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_recent_files',
+    description: 'List recently opened files from the Windows Recent folder.',
+    inputSchema: { type: 'object', properties: { limit: { type: 'number', description: 'Max files to return (default 20)' } } },
+  },
+  {
+    name: 'system_health_check',
+    description: 'Run a comprehensive system health check: CPU, RAM, disk, services, and event log errors.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_scheduled_tasks',
+    description: 'List Windows scheduled tasks with name, status, next run time, and last result.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filter: { type: 'string', description: 'Optional name filter substring' },
+        status: { type: 'string', enum: ['Ready', 'Running', 'Disabled', 'All'], description: 'Filter by status (default: All)' },
+        limit:  { type: 'number', description: 'Max tasks to return (default 50)' },
+      },
+    },
+  },
+  {
+    name: 'get_usb_devices',
+    description: 'List connected USB devices with name, device ID, and status.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'cpu_benchmark',
+    description: 'Run a brief CPU benchmark (integer ops) and return estimated MOPS and relative score.',
+    inputSchema: { type: 'object', properties: { durationMs: { type: 'number', description: 'Benchmark duration in milliseconds (default 500, max 5000)' } } },
+  },
+  {
+    name: 'memory_pressure_report',
+    description: 'Report on current memory pressure: total, used, free, paging activity, and high-memory processes.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_windows_version',
+    description: 'Get detailed Windows OS version info including build number, edition, and release ID.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'check_port_open',
+    description: 'Check if a TCP port on a host is open and responding.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        host: { type: 'string', description: 'Hostname or IP address' },
+        port: { type: 'number', description: 'TCP port number', minimum: 1, maximum: 65535 },
+        timeoutMs: { type: 'number', description: 'Connection timeout (default 3000ms)' },
+      },
+      required: ['host', 'port'],
+    },
+  },
+  {
+    name: 'list_shares',
+    description: 'List shared folders on this Windows machine.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'file_info',
+    description: 'Get detailed information about a file: size, dates, hash, permissions, line count.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filePath:  { type: 'string', description: 'Absolute path to the file' },
+        algorithm: { type: 'string', enum: ['md5','sha1','sha256','sha512'], description: 'Hash algorithm (default sha256)' },
+      },
+      required: ['filePath'],
+    },
+  },
+  {
+    name: 'directory_size',
+    description: 'Calculate total size of a directory recursively.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dirPath:   { type: 'string', description: 'Absolute path to the directory' },
+        topN:      { type: 'number', description: 'Return top N largest files (default 10)' },
+      },
+      required: ['dirPath'],
+    },
+  },
+  {
+    name: 'window_screenshot_grid',
+    description: 'Take screenshots of multiple windows and return their titles and image metadata.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        titles: { type: 'array', description: 'Array of window title patterns to screenshot' },
+      },
+      required: ['titles'],
+    },
+  },
+  {
+    name: 'bulk_kill_processes',
+    description: 'Kill multiple processes by name pattern.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        namePattern: { type: 'string', description: 'Process name pattern to match (partial, case-insensitive)' },
+        dryRun:      { type: 'boolean', description: 'If true, only list matching processes without killing (default: true for safety)' },
+      },
+      required: ['namePattern'],
+    },
+  },
+  {
+    name: 'get_dns_info',
+    description: 'Resolve a hostname using DNS and return all IP addresses.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        hostname: { type: 'string', description: 'Hostname to resolve' },
+      },
+      required: ['hostname'],
+    },
+  },
+  {
+    name: 'tail_file',
+    description: 'Read the last N lines of a file (like Unix tail).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Absolute path to file' },
+        lines:    { type: 'number', description: 'Number of lines from end (default 50, max 500)' },
+      },
+      required: ['filePath'],
+    },
+  },
+  {
+    name: 'move_file',
+    description: 'Move or rename a file or directory.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        source:      { type: 'string', description: 'Source path' },
+        destination: { type: 'string', description: 'Destination path' },
+      },
+      required: ['source', 'destination'],
+    },
+  },
+  {
+    name: 'copy_file',
+    description: 'Copy a file to a new location.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        source:      { type: 'string', description: 'Source file path' },
+        destination: { type: 'string', description: 'Destination file path' },
+        overwrite:   { type: 'boolean', description: 'Overwrite if destination exists (default: false)' },
+      },
+      required: ['source', 'destination'],
+    },
+  },
+  {
+    name: 'delete_file',
+    description: 'Delete a file. Cannot delete directories. Use with caution.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', description: 'Absolute path to file to delete' },
+        confirm:  { type: 'boolean', description: 'Must be true to actually delete (safety check)' },
+      },
+      required: ['filePath', 'confirm'],
+    },
+  },
+  {
+    name: 'create_directory',
+    description: 'Create a directory (including all parent directories).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dirPath: { type: 'string', description: 'Absolute path to create' },
+      },
+      required: ['dirPath'],
+    },
+  },
+  {
+    name: 'archive_extract',
+    description: 'Extract a ZIP archive to a destination folder.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        zipPath:     { type: 'string', description: 'Absolute path to the ZIP file' },
+        destination: { type: 'string', description: 'Destination directory path' },
+        overwrite:   { type: 'boolean', description: 'Overwrite existing files (default: false)' },
+      },
+      required: ['zipPath', 'destination'],
+    },
+  },
+  {
+    name: 'whoami_info',
+    description: 'Get current user, domain, computer name, and privilege level.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_clipboard_history',
+    description: 'Attempt to read recent clipboard history entries (requires Windows Clipboard History to be enabled).',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_uptime_detailed',
+    description: 'Get detailed system uptime: boot time, uptime in human-readable format, and current time.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'list_fonts',
+    description: 'List installed Windows fonts.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filter: { type: 'string', description: 'Optional name filter substring' },
+        limit:  { type: 'number', description: 'Max fonts to return (default 100)' },
+      },
+    },
+  },
+  {
+    name: 'get_power_plan',
+    description: 'Get the current active Windows power plan and list available plans.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'os_bridge_meta',
+    description: 'Get os-bridge metadata: version, tool count, capabilities summary, and platform info.',
+    inputSchema: { type: 'object', properties: {} },
+  },
 ];
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
@@ -2824,6 +3579,46 @@ async function handleTool(name, args) {
     case 'resume_control':      return resumeControl();
     case 'emergency_stop':      return emergencyStop();
     case 'reset_emergency_stop':return resetEmergencyStop();
+    // v1.0.1–v2.5.0 new tools
+    case 'get_disk_usage':          return getDiskUsage(args);
+    case 'ping_host':               return pingHost(args);
+    case 'get_network_adapters':    return getNetworkAdapters(args);
+    case 'manage_service':          return manageService(args);
+    case 'get_battery_status':      return getBatteryStatus();
+    case 'get_wifi_networks':       return getWifiNetworks();
+    case 'find_in_files':           return findInFiles(args);
+    case 'get_display_info':        return getDisplayInfo();
+    case 'process_snapshot':        return processSnapshot(args);
+    case 'get_user_sessions':       return getUserSessions();
+    case 'get_temp_files':          return getTempFiles(args);
+    case 'get_firewall_rules':      return getFirewallRules(args);
+    case 'get_hotkeys':             return getHotkeys();
+    case 'get_recent_files':        return getRecentFiles(args);
+    case 'system_health_check':     return systemHealthCheck();
+    case 'get_scheduled_tasks':     return getScheduledTasks(args);
+    case 'get_usb_devices':         return getUsbDevices();
+    case 'cpu_benchmark':           return cpuBenchmark(args);
+    case 'memory_pressure_report':  return memoryPressureReport();
+    case 'get_windows_version':     return getWindowsVersion();
+    case 'check_port_open':         return checkPortOpen(args);
+    case 'list_shares':             return listShares();
+    case 'file_info':               return fileInfo(args);
+    case 'directory_size':          return directorySize(args);
+    case 'window_screenshot_grid':  return windowScreenshotGrid(args);
+    case 'bulk_kill_processes':     return bulkKillProcesses(args);
+    case 'get_dns_info':            return getDnsInfo(args);
+    case 'tail_file':               return tailFile(args);
+    case 'move_file':               return moveFile(args);
+    case 'copy_file':               return copyFile(args);
+    case 'delete_file':             return deleteFile(args);
+    case 'create_directory':        return createDirectory(args);
+    case 'archive_extract':         return archiveExtract(args);
+    case 'whoami_info':             return whoamiInfo();
+    case 'get_clipboard_history':   return getClipboardHistory();
+    case 'get_uptime_detailed':     return getUptimeDetailed();
+    case 'list_fonts':              return listFonts(args);
+    case 'get_power_plan':          return getPowerPlan();
+    case 'os_bridge_meta':          return osBridgeMeta();
     default: throw new Error(`Unknown tool: ${name}`);
   }
 }

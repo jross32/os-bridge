@@ -1,15 +1,15 @@
 {
-  "timestamp": "2026-05-05T11:09:48.262Z",
-  "runStamp": "2026-05-05_070830",
+  "timestamp": "2026-05-05T11:40:33.526Z",
+  "runStamp": "2026-05-05_073919",
   "includeDangerous": false,
   "testFile": "group-i-window-intel/test.js",
   "id": "group-i-window-intel",
   "status": "pass",
-  "durationMs": 14806,
+  "durationMs": 14804,
   "notes": "Window intelligence tools returned expected structures and selector parity checks passed",
   "details": {
-    "visibleWindows": 8,
+    "visibleWindows": 7,
     "focusedTitle": "Web Scraper MCP - Tool Reference - Google Chrome",
-    "hierarchyNodes": 14
+    "hierarchyNodes": 13
   }
 }
