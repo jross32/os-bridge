@@ -1,17 +1,17 @@
 {
-  "timestamp": "2026-05-03T19:13:58.722Z",
-  "runStamp": "2026-05-03_151330",
+  "timestamp": "2026-05-05T11:09:04.520Z",
+  "runStamp": "2026-05-05_070830",
   "includeDangerous": false,
   "testFile": "group-f-visual/test-get-window-rect/test.js",
   "id": "group-f-visual/test-get-window-rect",
   "status": "pass",
-  "durationMs": 6015,
+  "durationMs": 6490,
   "notes": "get_window_rect: error case and shape validation passed",
   "details": {
     "windowTested": "Web Scraper MCP - Tool Reference - Googl",
     "rect": {
-      "x": 357,
-      "y": 0,
+      "x": -6,
+      "y": 162,
       "w": 951,
       "h": 660
     }

@@ -1,14 +1,14 @@
 {
-  "timestamp": "2026-05-03T19:14:04.970Z",
-  "runStamp": "2026-05-03_151330",
+  "timestamp": "2026-05-05T11:09:11.556Z",
+  "runStamp": "2026-05-05_070830",
   "includeDangerous": false,
   "testFile": "group-f-visual/test-screenshot-window/test.js",
   "id": "group-f-visual/test-screenshot-window",
   "status": "pass",
-  "durationMs": 6240,
+  "durationMs": 7024,
   "notes": "screenshot_window: fallback + real window capture both pass",
   "details": {
     "windowCaptured": "Web Scraper MCP - Tool Reference - Googl",
-    "imageSizeKB": 219
+    "imageSizeKB": 250
   }
 }

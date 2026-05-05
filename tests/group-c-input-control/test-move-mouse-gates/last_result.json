@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-03T19:13:52.678Z",
-  "runStamp": "2026-05-03_151330",
+  "timestamp": "2026-05-05T11:08:57.997Z",
+  "runStamp": "2026-05-05_070830",
   "includeDangerous": false,
   "testFile": "group-c-input-control/test-move-mouse-gates/test.js",
   "id": "group-c-input-control/test-move-mouse-gates",
   "status": "pass",
-  "durationMs": 6,
+  "durationMs": 8,
   "notes": "move_mouse correctly blocked by both safety gates",
   "details": null
 }

@@ -511,7 +511,7 @@ $procs = Get-Process | Select-Object Id, ProcessName,
 ${filterLine}
 $procs = $procs | Sort-Object ${sortCol} -Descending
 $procs | Select-Object -First ${limit} | ConvertTo-Json -Compress`;
-  return tryJson(psRun(script));
+  return tryJson(psRun(script, 30000));
 }
 
 async function processResourceHotspots(args) {

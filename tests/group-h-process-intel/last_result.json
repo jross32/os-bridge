@@ -1,16 +1,16 @@
 {
-  "timestamp": "2026-05-03T19:14:22.259Z",
-  "runStamp": "2026-05-03_151330",
+  "timestamp": "2026-05-05T11:09:33.449Z",
+  "runStamp": "2026-05-05_070830",
   "includeDangerous": false,
   "testFile": "group-h-process-intel/test.js",
   "id": "group-h-process-intel",
   "status": "pass",
-  "durationMs": 15750,
+  "durationMs": 20420,
   "notes": "Process intelligence tools returned expected structures and wait/process checks passed",
   "details": {
     "topCpuRows": 3,
     "treeNodes": 3,
-    "summaryRows": 10,
+    "summaryRows": 18,
     "connectionRows": 25
   }
 }
