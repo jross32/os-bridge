@@ -2220,8 +2220,23 @@ async function memoryPressureReport() {
 }
 
 async function getWindowsVersion() {
-  const raw = psRun(`[PSCustomObject]@{Caption=(Get-CimInstance Win32_OperatingSystem).Caption;Version=(Get-CimInstance Win32_OperatingSystem).Version;BuildNumber=(Get-CimInstance Win32_OperatingSystem).BuildNumber;Architecture=(Get-CimInstance Win32_OperatingSystem).OSArchitecture;Edition=(Get-WindowsEdition -Online -ErrorAction SilentlyContinue).Edition} | ConvertTo-Json`, 15000);
-  return tryJson(raw) || {};
+  const raw = psRun(`$os = Get-CimInstance Win32_OperatingSystem; $reg = Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion' -ErrorAction SilentlyContinue; [PSCustomObject]@{ Caption=$os.Caption; Version=$os.Version; BuildNumber=$os.BuildNumber; Architecture=$os.OSArchitecture; ServicePack=$os.ServicePackMajorVersion; InstallDate=$os.InstallDate; LastBootUpTime=$os.LastBootUpTime; SerialNumber=$os.SerialNumber; RegisteredUser=$os.RegisteredUser; Organization=$os.Organization; DisplayVersion=($reg.DisplayVersion); ReleaseId=($reg.ReleaseId); EditionID=($reg.EditionID); UBR=($reg.UBR); CurrentBuildFull="$($os.BuildNumber).$($reg.UBR)" } | ConvertTo-Json`, 10000);
+  const parsed = tryJson(raw) || {};
+  return {
+    caption: parsed.Caption,
+    version: parsed.Version,
+    buildNumber: parsed.BuildNumber,
+    buildFull: parsed.CurrentBuildFull,
+    displayVersion: parsed.DisplayVersion,
+    releaseId: parsed.ReleaseId,
+    editionId: parsed.EditionID,
+    architecture: parsed.Architecture,
+    ubr: parsed.UBR,
+    installDate: parsed.InstallDate,
+    lastBootUpTime: parsed.LastBootUpTime,
+    registeredUser: parsed.RegisteredUser,
+    organization: parsed.Organization || null,
+  };
 }
 
 async function checkPortOpen(args) {
@@ -3673,6 +3688,101 @@ function makeImageResult(data) {
     },
     isError: false,
   };
+}
+
+// ── Health + docs HTTP server ─────────────────────────────────────────────────
+function startHealthServer(port) {
+  const http = require('http');
+
+  function handleRequest(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') { res.writeHead(200); res.end(); return; }
+
+    const url = req.url.split('?')[0];
+
+    if (url === '/health' || url === '/') {
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({
+        status: 'ok',
+        tools: TOOLS.length,
+        prompts: PROMPTS.length,
+        version: SERVER_VERSION,
+        name: 'os-bridge',
+        transport: 'stdio',
+        healthPort: port,
+      }));
+
+    } else if (url === '/docs') {
+      res.setHeader('Content-Type', 'text/html');
+      const toolRows = TOOLS.map((t) =>
+        `<tr><td><code>${t.name}</code></td><td>${t.description || ''}</td></tr>`
+      ).join('\n');
+      const promptRows = PROMPTS.map((p) =>
+        `<tr><td><code>${p.name}</code></td><td>${p.description || ''}</td></tr>`
+      ).join('\n');
+      res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>os-bridge</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:960px;margin:40px auto;padding:0 20px;line-height:1.5;color:#222}
+  h1{color:#1a1a2e}h2{color:#16213e;border-bottom:2px solid #eee;padding-bottom:6px;margin-top:32px}
+  code{background:#f4f4f4;padding:2px 6px;border-radius:3px;font-size:0.9em;font-family:monospace}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{padding:8px 12px;border:1px solid #ddd;text-align:left;vertical-align:top}
+  th{background:#f8f8f8;font-weight:600}
+  .badge{background:#007acc;color:#fff;padding:2px 8px;border-radius:12px;font-size:0.8em;margin-left:8px}
+  .tag{background:#e8f4fd;color:#0369a1;padding:1px 6px;border-radius:10px;font-size:0.78em}
+  a{color:#007acc}p{margin:8px 0}
+  .links{display:flex;gap:16px;margin:16px 0;flex-wrap:wrap}
+  .links a{background:#f0f7ff;border:1px solid #bee3f8;padding:6px 14px;border-radius:6px;text-decoration:none;font-weight:500}
+  .links a:hover{background:#dbeafe}
+</style></head>
+<body>
+<h1>os-bridge <span class="badge">v${SERVER_VERSION}</span></h1>
+<p>Windows OS automation MCP server — system monitoring, mouse/keyboard input, window management, clipboard, file operations, and persistent shell sessions.</p>
+<div class="links">
+  <a href="/health">/health — JSON status</a>
+  <a href="/tools">/tools — JSON tool list</a>
+  <a href="/docs">/docs — this page</a>
+</div>
+<p><strong>Transport:</strong> stdio (MCP JSON-RPC protocol)</p>
+<p><strong>Use with Claude Code:</strong> Add <code>"os-bridge"</code> to <code>~/.claude/mcp.json</code> with env <code>OS_BRIDGE_HEALTH_PORT=11300</code>.</p>
+<p><strong>Use with any AI:</strong> Any AI client supporting the MCP stdio protocol works — start with <code>node mcp-server.js</code> and pipe JSON-RPC messages to stdin.</p>
+<h2>Tools (${TOOLS.length})</h2>
+<table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody>
+${toolRows}
+</tbody></table>
+<h2>Prompts (${PROMPTS.length})</h2>
+<table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody>
+${promptRows}
+</tbody></table>
+</body></html>`);
+
+    } else if (url === '/tools') {
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({
+        tools: TOOLS.map((t) => ({ name: t.name, description: t.description })),
+        count: TOOLS.length,
+      }));
+
+    } else {
+      res.writeHead(404, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify({ error: 'Not found', paths: ['/health', '/docs', '/tools'] }));
+    }
+  }
+
+  http.createServer(handleRequest).listen(port, () => {
+    process.stderr.write(`[os-bridge] Health+docs server → http://localhost:${port}/health\n`);
+    process.stderr.write(`[os-bridge] Human docs         → http://localhost:${port}/docs\n`);
+    process.stderr.write(`[os-bridge] ${TOOLS.length} tools · ${PROMPTS.length} prompts · v${SERVER_VERSION}\n`);
+  });
+}
+
+{
+  const healthPort = parseInt(process.env.OS_BRIDGE_HEALTH_PORT || '11300');
+  if (process.argv.includes('--http') || process.env.OS_BRIDGE_HEALTH_PORT) {
+    startHealthServer(healthPort);
+  }
 }
 
 const rl = readline.createInterface({ input: process.stdin, terminal: false });
