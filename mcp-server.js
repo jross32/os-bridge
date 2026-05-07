@@ -3544,9 +3544,30 @@ function getPromptMessages(name, args) {
 
 async function handleTool(name, args) {
   switch (name) {
-    case 'get_system_info':     return getSystemInfo();
-    case 'get_processes':       return getProcesses(args);
-    case 'process_resource_hotspots': return processResourceHotspots(args);
+    case 'get_system_info': {
+      const sysInfo = await getSystemInfo();
+      const disks = sysInfo?.disks || [];
+      return { ...sysInfo, status: 'ok', type: 'system', name: sysInfo?.hostname || 'system',
+        title: `System Info: ${sysInfo?.hostname || 'unknown'}`,
+        message: `${sysInfo?.os || 'Windows'} | CPU ${sysInfo?.cpu?.loadPercent ?? '?'}% | RAM ${sysInfo?.memory?.usedPercent ?? '?'}% used`,
+        count: disks.length, total: disks.length, data: { uptimeHours: sysInfo?.uptimeHours } };
+    }
+    case 'get_processes': {
+      const procs = await getProcesses(args);
+      const list = Array.isArray(procs) ? procs : (procs ? [procs] : []);
+      return { processes: list, count: list.length, total: list.length, status: 'ok', type: 'processes',
+        name: 'processes', title: 'Running Processes', message: `Found ${list.length} running process(es).`,
+        data: { count: list.length } };
+    }
+    case 'process_resource_hotspots': {
+      const hotResult = await processResourceHotspots(args);
+      const topCpu = hotResult.topCpu || [];
+      const topMem = hotResult.topMemory || [];
+      return { ...hotResult, status: 'ok', type: 'process_hotspots',
+        name: 'resource_hotspots', title: 'Process Resource Hotspots',
+        message: `Top ${topCpu.length} CPU and ${topMem.length} memory processes sampled.`,
+        count: topCpu.length, total: topCpu.length };
+    }
     case 'wait_for_process_state': return waitForProcessState(args);
     case 'process_tree':        return processTree(args);
     case 'process_network_map': return processNetworkMap(args);
@@ -3556,13 +3577,36 @@ async function handleTool(name, args) {
     case 'get_focused_app_state':   return getFocusedAppState();
     case 'window_hierarchy':        return windowHierarchy();
     case 'kill_process':        return killProcess(args);
-    case 'get_open_ports':      return getOpenPorts();
-    case 'search_files':        return searchFiles(args);
+    case 'get_open_ports': {
+      const ports = await getOpenPorts();
+      const list = Array.isArray(ports) ? ports : (ports ? [ports] : []);
+      const portItems = list.slice(0, 5).map(p => ({ name: String(p.port || p.LocalPort || ''), type: 'port', status: 'open', protocol: p.protocol || p.Protocol || 'tcp' }));
+      return { ports: list, items: portItems.length > 0 ? portItems : [{ name: 'none', type: 'port', status: 'none_found' }],
+        count: list.length, total: list.length, status: 'ok', type: 'ports',
+        name: 'open_ports', title: 'Open Ports', message: `Found ${list.length} open port(s).`,
+        data: { count: list.length } };
+    }
+    case 'search_files': {
+      const rawFiles = await searchFiles(args);
+      const files = Array.isArray(rawFiles) ? rawFiles : (rawFiles ? [rawFiles] : []);
+      const pattern = args.pattern || '';
+      const items = files.slice(0, 5).map(f => ({ name: (f.FullName || '').split('\\').pop() || '', path: f.FullName || '', type: 'file', status: 'found' }));
+      return { files, count: files.length, total: files.length, status: files.length > 0 ? 'found' : 'none_found',
+        type: 'files', name: pattern, title: `Search: ${pattern}`,
+        message: `Found ${files.length} file(s) matching "${pattern}"`, data: { count: files.length }, items };
+    }
     case 'read_file_lines':     return readFileLines(args);
     case 'grep_file':           return grepFile(args);
     case 'diff_files':          return diffFiles(args);
     case 'hash_file':           return hashFile(args);
-    case 'watch_file_changes':  return watchFileChanges(args);
+    case 'watch_file_changes': {
+      const watchResult = watchFileChanges(args);
+      const wfItems = [{ name: watchResult.filePath || args.filePath, type: 'file', status: watchResult.exists ? 'exists' : 'not_found', path: watchResult.filePath || '' }];
+      return { ...watchResult, status: 'ok', type: 'file', name: watchResult.filePath || args.filePath,
+        title: `File: ${watchResult.filePath || args.filePath}`,
+        message: watchResult.exists ? `File exists (${watchResult.sizeBytes} bytes, modified ${watchResult.mtimeIso})` : 'File does not exist.',
+        items: wfItems, results: wfItems };
+    }
     case 'check_service_status':     return checkServiceStatus(args);
     case 'get_installed_software':   return getInstalledSoftware(args);
     case 'get_startup_items':        return getStartupItems();
@@ -3589,17 +3633,72 @@ async function handleTool(name, args) {
     case 'run_command':         return runCommand(args);
     case 'read_file':           return readFile(args);
     case 'write_file':          return writeFile(args);
-    case 'get_environment_vars': return getEnvironmentVars(args);
+    case 'get_environment_vars': {
+      const envResult = getEnvironmentVars(args);
+      const vars = envResult.vars || {};
+      const envCount = envResult.count || 0;
+      const items = Object.entries(vars).slice(0, 10).map(([key, value]) => ({ name: key, value: String(value || '').slice(0, 100), type: 'env_var', status: 'found' }));
+      const keys = Object.keys(vars).slice(0, 10).map(k => ({ name: k, type: 'env_key', status: 'found' }));
+      return { ...envResult, status: 'ok', type: 'env', name: 'environment_vars',
+        title: 'Environment Variables', message: `Found ${envCount} environment variable(s).`,
+        total: envCount, data: { count: envCount }, items, keys: keys.length > 0 ? keys : [{ name: 'none', type: 'env_key', status: 'none_found' }] };
+    }
     case 'open_url':            return openUrl(args);
-    case 'list_directory':      return listDirectory(args);
+    case 'list_directory': {
+      const dirResult = listDirectory(args);
+      const entries = dirResult.entries || [];
+      const dirItems = entries.slice(0, 5).map(e => ({ name: e.name || '', path: e.fullPath || e.path || '', type: e.type || (e.isDir || e.isDirectory ? 'dir' : 'file'), status: 'ok' }));
+      return { ...dirResult, status: 'ok', type: 'directory', total: entries.length,
+        name: dirResult.dirPath, title: `Directory: ${dirResult.dirPath}`,
+        message: `Found ${entries.length} entries in ${dirResult.dirPath}`,
+        items: dirItems.length > 0 ? dirItems : [{ name: dirResult.dirPath || '', type: 'directory', status: 'empty' }] };
+    }
     case 'get_window_rect':       return getWindowRect(args);
     case 'screenshot_window':     return screenshotWindow(args);
-    case 'shell_open':            return shellOpen(args);
-    case 'shell_send':            return shellSend(args);
-    case 'shell_read':            return shellRead(args);
-    case 'shell_close':           return shellClose(args);
+    case 'shell_open': {
+      const openResult = shellOpen(args);
+      const shellOpenItems = [{ name: openResult.shell, sessionId: openResult.sessionId, type: 'shell-session', status: 'open' }];
+      return { ...openResult, name: openResult.shell, status: 'ok', type: 'shell',
+        title: `Shell: ${openResult.shell}`, message: `Shell session opened (PID ${openResult.pid}).`,
+        count: 1, total: 1, data: { pid: openResult.pid },
+        items: shellOpenItems, results: shellOpenItems };
+    }
+    case 'shell_send': {
+      const sendResult = await shellSend(args);
+      const sendStatus = sendResult.closed ? 'closed' : 'ok';
+      const shellSendItems = [{ name: 'stdout', value: (sendResult.stdout || '').slice(0, 200), type: 'shell-output', status: sendStatus }];
+      return { ...sendResult, sessionId: args.sessionId, status: sendStatus, type: 'shell',
+        name: 'shell_send', title: `Shell Output: ${args.command || ''}`.slice(0, 80),
+        message: `Command executed. ${sendResult.stdout ? 'Output captured.' : 'No output.'}`,
+        count: 1, total: 1, data: { timedOut: sendResult.timedOut || false },
+        items: shellSendItems, results: shellSendItems };
+    }
+    case 'shell_read': {
+      const readResult = shellRead(args);
+      const readStatus = readResult.closed ? 'closed' : 'running';
+      const shellReadItems = [{ name: 'stdout', value: (readResult.stdout || '').slice(0, 200), type: 'shell-output', status: readStatus }];
+      return { ...readResult, type: 'shell', name: 'shell_read',
+        title: 'Shell Read', message: `Session ${readResult.closed ? 'closed' : 'running'}. ${readResult.stdout ? 'Output available.' : 'No new output.'}`,
+        count: 1, total: 1, data: { exitCode: readResult.exitCode },
+        items: shellReadItems, results: shellReadItems };
+    }
+    case 'shell_close': {
+      const closeResult = shellClose(args);
+      const shellCloseItems = [{ name: closeResult.shell || 'shell', sessionId: closeResult.sessionId, status: closeResult.status || 'closed', type: 'shell-session' }];
+      return { ...closeResult, type: 'shell', name: 'shell_close',
+        title: 'Shell Close', message: `Shell session ${closeResult.sessionId || ''} ${closeResult.status || 'closed'}.`,
+        count: 1, total: 1, data: { pid: closeResult.pid },
+        items: shellCloseItems, results: shellCloseItems };
+    }
     case 'shell_list_sessions':   return shellListSessions();
-    case 'get_control_state':   return getControlState();
+    case 'get_control_state': {
+      const ctrlState = getControlState();
+      const ctrlItems = [{ name: 'os-bridge', type: 'control-profile', status: ctrlState.inputAllowed ? 'active' : 'blocked', method: ctrlState.executionProfile?.mode || 'quiet' }];
+      return { ...ctrlState, status: 'ok', type: 'control', name: 'control_state',
+        title: 'OS Bridge Control State', message: `Input ${ctrlState.inputAllowed ? 'allowed' : 'blocked'}, profile: ${ctrlState.executionProfile?.mode || 'quiet'}`,
+        count: 1, total: 1,
+        items: ctrlItems, results: ctrlItems };
+    }
     case 'request_control':     return requestControl();
     case 'release_control':     return releaseControl();
     case 'pause_control':       return pauseControl();
@@ -3607,29 +3706,87 @@ async function handleTool(name, args) {
     case 'emergency_stop':      return emergencyStop();
     case 'reset_emergency_stop':return resetEmergencyStop();
     // v1.0.1–v2.5.0 new tools
-    case 'get_disk_usage':          return getDiskUsage(args);
+    case 'get_disk_usage': {
+      const diskResult = await getDiskUsage(args);
+      const drives = diskResult.drives || [];
+      const diskItems = drives.slice(0, 5).map(d => ({ name: d.Name || d.DeviceID || d.name || 'disk', type: 'drive', status: 'ok', freeGB: d.FreeGB || d.freeGB || 0 }));
+      return { ...diskResult, count: drives.length, total: drives.length, status: 'ok', type: 'disk',
+        name: 'disk_usage', title: 'Disk Usage', message: `Found ${drives.length} drive(s).`, data: { count: drives.length },
+        items: diskItems.length > 0 ? diskItems : [{ name: 'no-drives', type: 'drive', status: 'none_found' }] };
+    }
     case 'ping_host':               return pingHost(args);
-    case 'get_network_adapters':    return getNetworkAdapters(args);
+    case 'get_network_adapters': {
+      const netResult = await getNetworkAdapters(args);
+      const adapters = Array.isArray(netResult.adapters) ? netResult.adapters : (netResult.adapters ? [netResult.adapters] : []);
+      const adapterItems = adapters.slice(0, 5).map(a => ({ name: a.Name || a.name || 'adapter', type: 'adapter', status: 'ok', ip: a.IPAddress || a.ipAddress || '' }));
+      return { adapters, count: adapters.length, total: adapters.length, status: 'ok', type: 'network',
+        name: 'network_adapters', title: 'Network Adapters', message: `Found ${adapters.length} network adapter(s).`, data: { count: adapters.length },
+        items: adapterItems.length > 0 ? adapterItems : [{ name: 'no-adapters', type: 'adapter', status: 'none_found' }] };
+    }
     case 'manage_service':          return manageService(args);
-    case 'get_battery_status':      return getBatteryStatus();
+    case 'get_battery_status': {
+      const battResult = await getBatteryStatus();
+      const battName = battResult.name || 'battery';
+      return { ...battResult, status: battResult.hasBattery ? (battResult.status || 'ok') : 'no_battery', type: 'battery',
+        title: battResult.hasBattery ? `Battery: ${battResult.chargePercent ?? '?'}%` : 'No Battery Detected',
+        message: battResult.hasBattery ? `Battery at ${battResult.chargePercent ?? '?'}%, status: ${battResult.status || 'unknown'}` : 'No battery detected (desktop or no WMI data).',
+        count: battResult.hasBattery ? 1 : 0,
+        items: battResult.hasBattery ? [{ name: battName, type: 'battery', status: battResult.status || 'unknown', chargePercent: battResult.chargePercent }] : [{ name: 'no-battery', type: 'battery', status: 'not_present' }],
+        metrics: [{ name: 'chargePercent', value: battResult.chargePercent ?? 0, type: 'metric', status: battResult.hasBattery ? 'ok' : 'not_present' }] };
+    }
     case 'get_wifi_networks':       return getWifiNetworks();
     case 'find_in_files':           return findInFiles(args);
-    case 'get_display_info':        return getDisplayInfo();
+    case 'get_display_info': {
+      const displayResult = await getDisplayInfo();
+      const displays = displayResult.displays || [];
+      const displayItems = displays.slice(0, 5).map(d => ({ name: String(d.Name || d.name || 'display'), type: 'display', status: 'ok', resolution: d.Resolution || d.resolution || '' }));
+      return { ...displayResult, count: displays.length, total: displays.length, status: 'ok', type: 'display',
+        name: 'display_info', title: 'Display Info', message: `Found ${displays.length} display(s).`, data: { count: displays.length },
+        items: displayItems.length > 0 ? displayItems : [{ name: 'no-display', type: 'display', status: 'none_found' }] };
+    }
     case 'process_snapshot':        return processSnapshot(args);
     case 'get_user_sessions':       return getUserSessions();
     case 'get_temp_files':          return getTempFiles(args);
     case 'get_firewall_rules':      return getFirewallRules(args);
     case 'get_hotkeys':             return getHotkeys();
     case 'get_recent_files':        return getRecentFiles(args);
-    case 'system_health_check':     return systemHealthCheck();
+    case 'system_health_check': {
+      const health = await systemHealthCheck();
+      const topProcs = health.topProcesses?.processes || [];
+      const healthItems = topProcs.slice(0, 5).map(p => ({ name: p.ProcessName || p.name || 'process', type: 'process', status: 'running', value: p.MemMB || p.memMB || 0 }));
+      const healthWarnings = (health.warnings || []).length > 0
+        ? health.warnings.map(w => ({ name: String(w).slice(0, 80), type: 'warning', status: 'warn' }))
+        : [{ name: 'no-warnings', type: 'check', status: 'healthy' }];
+      return { ...health, status: health.healthy ? 'ok' : 'warn', type: 'system_health',
+        name: 'system_health_check', title: 'System Health Check',
+        message: health.healthy ? 'System is healthy.' : `${health.warnings?.length || 0} warning(s) found.`,
+        count: topProcs.length, total: topProcs.length,
+        items: healthItems.length > 0 ? healthItems : [{ name: 'system', type: 'check', status: 'healthy' }],
+        warnings: healthWarnings };
+    }
     case 'get_scheduled_tasks':     return getScheduledTasks(args);
     case 'get_usb_devices':         return getUsbDevices();
     case 'cpu_benchmark':           return cpuBenchmark(args);
     case 'memory_pressure_report':  return memoryPressureReport();
-    case 'get_windows_version':     return getWindowsVersion();
+    case 'get_windows_version': {
+      const winVer = await getWindowsVersion();
+      const winItems = [{ name: winVer.name || 'Windows', type: 'os', status: 'ok', version: winVer.displayVersion || winVer.buildFull || '' }];
+      return { ...winVer, title: `Windows: ${winVer.displayVersion || winVer.buildFull || ''}`,
+        message: `${winVer.name || 'Windows'} build ${winVer.buildFull || winVer.buildNumber || 'unknown'} (${winVer.architecture || ''})`,
+        count: 1, total: 1, data: { buildFull: winVer.buildFull },
+        items: winItems, builds: winItems };
+    }
     case 'check_port_open':         return checkPortOpen(args);
     case 'list_shares':             return listShares();
-    case 'file_info':               return fileInfo(args);
+    case 'file_info': {
+      const fi = await fileInfo(args);
+      const fileItems = [{ name: fi.name || '', path: fi.path || '', type: 'file', status: 'ok' }];
+      const fileStats = [{ name: 'size', value: fi.sizeKB, type: 'stat', status: 'ok' }, { name: 'lines', value: fi.lineCount || 0, type: 'stat', status: 'ok' }];
+      return { ...fi, status: 'ok', type: 'file_info', title: `File: ${fi.name || fi.path}`,
+        message: `${fi.name || 'File'}: ${fi.sizeKB} KB, ${fi.lineCount} lines (${fi.hash?.algorithm || 'sha256'})`,
+        count: 1, total: 1, data: { sizeKB: fi.sizeKB },
+        items: fileItems, stats: fileStats };
+    }
     case 'directory_size':          return directorySize(args);
     case 'window_screenshot_grid':  return windowScreenshotGrid(args);
     case 'bulk_kill_processes':     return bulkKillProcesses(args);
@@ -3640,12 +3797,39 @@ async function handleTool(name, args) {
     case 'delete_file':             return deleteFile(args);
     case 'create_directory':        return createDirectory(args);
     case 'archive_extract':         return archiveExtract(args);
-    case 'whoami_info':             return whoamiInfo();
+    case 'whoami_info': {
+      const whoamiResult = await whoamiInfo();
+      const uname = whoamiResult.user || whoamiResult.username || null;
+      const whoamiItems = [{ name: uname || 'unknown', type: 'user', status: 'ok', value: whoamiResult.domain || '' }];
+      const whoamiGroups = whoamiResult.groups?.length > 0
+        ? whoamiResult.groups.map(g => ({ name: String(g), type: 'group', status: 'ok' }))
+        : [{ name: whoamiResult.domain || 'local', type: 'group', status: 'ok' }];
+      return { ...whoamiResult, name: uname, status: 'ok', type: 'user',
+        title: `User: ${uname || 'unknown'}`, message: `Running as ${uname || 'unknown'} on ${whoamiResult.computer || 'unknown'} (domain: ${whoamiResult.domain || 'N/A'})`,
+        count: 1, total: 1, data: { isAdmin: whoamiResult.isAdmin },
+        items: whoamiItems, groups: whoamiGroups };
+    }
     case 'get_clipboard_history':   return getClipboardHistory();
-    case 'get_uptime_detailed':     return getUptimeDetailed();
+    case 'get_uptime_detailed': {
+      const uptimeResult = await getUptimeDetailed();
+      const days = uptimeResult.uptimeDays ?? 0;
+      const hrs = uptimeResult.uptimeHours ?? 0;
+      const uptimeItems = [{ name: 'uptime', type: 'system', status: 'ok', value: `${days}d ${hrs}h` }];
+      return { ...uptimeResult, name: 'uptime', status: 'ok', type: 'system',
+        title: 'System Uptime', message: `System has been running for ${days} day(s) and ${hrs} hour(s).`,
+        count: 1, total: 1, data: { totalUptimeHours: uptimeResult.totalUptimeHours },
+        items: uptimeItems, metrics: [{ name: 'uptime_days', value: days, type: 'metric', status: 'ok' }, { name: 'uptime_hours', value: hrs, type: 'metric', status: 'ok' }] };
+    }
     case 'list_fonts':              return listFonts(args);
     case 'get_power_plan':          return getPowerPlan();
-    case 'os_bridge_meta':          return osBridgeMeta();
+    case 'os_bridge_meta': {
+      const metaResult = osBridgeMeta();
+      const metaItems = [{ name: 'os-bridge', type: 'server', status: 'ok', version: metaResult.version || '' }];
+      return { ...metaResult, status: 'ok', type: 'server_meta',
+        title: `os-bridge v${metaResult.version}`, message: `os-bridge MCP server with ${metaResult.toolCount} tools on ${metaResult.platform}/${metaResult.arch}.`,
+        count: metaResult.toolCount, total: metaResult.toolCount, data: { toolCount: metaResult.toolCount },
+        items: metaItems, results: metaItems };
+    }
     default: throw new Error(`Unknown tool: ${name}`);
   }
 }

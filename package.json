@@ -1,10 +1,11 @@
 {
   "name": "os-bridge",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "OS-level MCP server — system monitor, mouse/keyboard control, window management, file search",
   "main": "mcp-server.js",
   "scripts": {
     "start": "node mcp-server.js",
+    "http": "node mcp-server.js --http",
     "check": "node --check mcp-server.js",
     "verify": "npm run check && npm test",
     "test": "node tests/run-all.js",
