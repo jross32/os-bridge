@@ -109,7 +109,14 @@ function shellRead(args) {
   if (!args.sessionId) throw new Error('sessionId required');
   const session = shellSessions.get(args.sessionId);
   if (!session) throw new Error(`No session: ${args.sessionId}`);
-  const out = { stdout: session.outputBuf, stderr: session.errorBuf, closed: session.closed, exitCode: session.exitCode };
+  const out = {
+    sessionId: args.sessionId,
+    stdout: session.outputBuf,
+    stderr: session.errorBuf,
+    closed: session.closed,
+    exitCode: session.exitCode,
+    status: session.closed ? 'closed' : 'running',
+  };
   if (args.clear) { session.outputBuf = ''; session.errorBuf = ''; }
   return out;
 }
@@ -117,13 +124,15 @@ function shellRead(args) {
 function shellClose(args) {
   if (!args.sessionId) throw new Error('sessionId required');
   const session = shellSessions.get(args.sessionId);
-  if (!session) return { closed: true, note: 'Session not found (already removed)' };
+  if (!session) return { closed: true, sessionId: args.sessionId || null, status: 'already_closed', message: 'Session not found (already removed)' };
+  const pid = session.proc?.pid || null;
+  const shell = session.shell || null;
   if (!session.closed) {
     try { session.proc.stdin.end(); } catch {}
     try { session.proc.kill(); }     catch {}
   }
   shellSessions.delete(args.sessionId);
-  return { closed: true, sessionId: args.sessionId };
+  return { closed: true, sessionId: args.sessionId, status: 'closed', pid, shell };
 }
 
 function shellListSessions() {
@@ -2223,6 +2232,9 @@ async function getWindowsVersion() {
   const raw = psRun(`$os = Get-CimInstance Win32_OperatingSystem; $reg = Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion' -ErrorAction SilentlyContinue; [PSCustomObject]@{ Caption=$os.Caption; Version=$os.Version; BuildNumber=$os.BuildNumber; Architecture=$os.OSArchitecture; ServicePack=$os.ServicePackMajorVersion; InstallDate=$os.InstallDate; LastBootUpTime=$os.LastBootUpTime; SerialNumber=$os.SerialNumber; RegisteredUser=$os.RegisteredUser; Organization=$os.Organization; DisplayVersion=($reg.DisplayVersion); ReleaseId=($reg.ReleaseId); EditionID=($reg.EditionID); UBR=($reg.UBR); CurrentBuildFull="$($os.BuildNumber).$($reg.UBR)" } | ConvertTo-Json`, 10000);
   const parsed = tryJson(raw) || {};
   return {
+    name: parsed.Caption,
+    type: 'operating_system',
+    status: 'ok',
     caption: parsed.Caption,
     version: parsed.Version,
     buildNumber: parsed.BuildNumber,
