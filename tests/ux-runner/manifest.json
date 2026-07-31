@@ -1,7 +1,7 @@
 {
   "name": "ux-runner",
   "version": "1.0.0",
-  "description": "Schema-first UX refinement runner for os-bridge",
+  "description": "Schema-first UX refinement runner for reflex",
   "folders": {
     "lib": "runtime and validation code",
     "schemas": "json schemas and contracts",

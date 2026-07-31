@@ -18,7 +18,7 @@
       "tool": "send_notification",
       "risk": "low",
       "args": {
-        "title": "os-bridge",
+        "title": "reflex",
         "message": "Agent-mode parity scenario is starting."
       },
       "expect": { "ok": true }
@@ -57,7 +57,7 @@
       "tool": "send_notification",
       "risk": "low",
       "args": {
-        "title": "os-bridge",
+        "title": "reflex",
         "message": "Agent-mode parity scenario completed successfully."
       },
       "expect": { "ok": true }

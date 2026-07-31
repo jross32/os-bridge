@@ -8,7 +8,7 @@ const { assert, assertHasKeys } = require('../../lib/assertions');
 module.exports = {
   async run({ client }) {
     // Create a temp dir with some files to list
-    const tmpDir = path.join(os.tmpdir(), `os-bridge-list-test-${Date.now()}`);
+    const tmpDir = path.join(os.tmpdir(), `reflex-list-test-${Date.now()}`);
     fs.mkdirSync(tmpDir, { recursive: true });
     fs.writeFileSync(path.join(tmpDir, 'alpha.txt'), 'a');
     fs.writeFileSync(path.join(tmpDir, 'beta.json'), '{}');

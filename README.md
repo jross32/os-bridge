@@ -1,4 +1,4 @@
-# os-bridge
+# reflex
 
 Windows-only MCP server for desktop automation, shell execution, screenshots, clipboard access, process inspection, and file operations.
 

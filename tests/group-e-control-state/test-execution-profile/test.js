@@ -8,7 +8,7 @@ module.exports = {
       mode: 'visible',
       announceActions: true,
       preActionDelayMs: 600,
-      notificationTitle: 'os-bridge test',
+      notificationTitle: 'reflex test',
     });
 
     assert(setVisible.ok, `Expected set_execution_profile success: ${setVisible.error}`);

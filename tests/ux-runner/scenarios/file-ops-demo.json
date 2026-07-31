@@ -14,8 +14,8 @@
       "id": "write-demo-file",
       "tool": "write_file",
       "args": {
-        "filePath": "${env.TEMP}\\os-bridge-demo-${runId}.txt",
-        "content": "os-bridge file-ops-demo\nstep: write_file\n"
+        "filePath": "${env.TEMP}\\reflex-demo-${runId}.txt",
+        "content": "reflex file-ops-demo\nstep: write_file\n"
       },
       "risk": "low",
       "expect": {

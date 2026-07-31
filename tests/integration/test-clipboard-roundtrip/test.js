@@ -4,7 +4,7 @@ const { assert } = require('../../lib/assertions');
 
 module.exports = {
   async run({ client }) {
-    const token = `os-bridge-roundtrip-${Date.now()}`;
+    const token = `reflex-roundtrip-${Date.now()}`;
 
     const write = await client.callTool('write_clipboard', { text: token });
     assert(write.ok, `write_clipboard failed: ${write.error}`);

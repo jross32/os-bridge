@@ -8,8 +8,8 @@ const { assert } = require('../../lib/assertions');
 module.exports = {
   async run({ client }) {
     // Write a temp file to read back
-    const tmpPath = path.join(os.tmpdir(), `os-bridge-read-test-${Date.now()}.txt`);
-    const expected = 'hello from os-bridge read_file test\nline 2';
+    const tmpPath = path.join(os.tmpdir(), `reflex-read-test-${Date.now()}.txt`);
+    const expected = 'hello from reflex read_file test\nline 2';
     fs.writeFileSync(tmpPath, expected, 'utf8');
 
     try {

@@ -4,7 +4,7 @@
     "mode": "watch",
     "announceActions": true,
     "preActionDelayMs": 1000,
-    "notificationTitle": "os-bridge agent mode",
+    "notificationTitle": "reflex agent mode",
     "autoApproveThrough": "medium"
   },
   "runner": {

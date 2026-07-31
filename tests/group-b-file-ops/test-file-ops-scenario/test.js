@@ -34,7 +34,7 @@ module.exports = {
 
     // Test 4: write_file + read_file live round-trip via MCP
     const os = require('os');
-    const tmpPath = path.join(os.tmpdir(), `os-bridge-roundtrip-${Date.now()}.txt`);
+    const tmpPath = path.join(os.tmpdir(), `reflex-roundtrip-${Date.now()}.txt`);
     const content = 'file-ops-demo test round-trip';
 
     const w = await client.callTool('write_file', { filePath: tmpPath, content });

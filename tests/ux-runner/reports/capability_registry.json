@@ -900,7 +900,7 @@
     },
     {
       "name": "get_environment_vars",
-      "description": "List environment variables visible to the os-bridge process. Optionally filter by prefix.",
+      "description": "List environment variables visible to the reflex process. Optionally filter by prefix.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1771,8 +1771,8 @@
       }
     },
     {
-      "name": "os_bridge_meta",
-      "description": "Get os-bridge metadata: version, tool count, capabilities summary, and platform info.",
+      "name": "reflex_meta",
+      "description": "Get reflex metadata: version, tool count, capabilities summary, and platform info.",
       "inputSchema": {
         "type": "object",
         "properties": {}

@@ -1,27 +1,27 @@
 {
-  "timestamp": "2026-05-11T04:59:50.958Z",
+  "timestamp": "2026-07-31T13:20:03.322Z",
   "server": {
-    "script": "C:\\Users\\justi\\mcp-servers\\os-bridge\\mcp-server.js",
+    "script": "C:\\Users\\justi\\mcp-servers\\reflex\\mcp-server.js",
     "toolsDiscovered": 101,
     "includeDangerous": false
   },
   "environment": {
     "platform": "win32",
-    "release": "10.0.26100",
+    "release": "10.0.26200",
     "node": "v24.14.0"
   },
   "summary": {
     "total": 24,
-    "passed": 24,
-    "failed": 0,
+    "passed": 23,
+    "failed": 1,
     "skipped": 0,
-    "durationMs": 99206
+    "durationMs": 66775
   },
   "tests": [
     {
       "id": "group-a-telemetry/test-get-open-ports",
       "status": "pass",
-      "durationMs": 5945,
+      "durationMs": 3824,
       "notes": "Open ports shape verified",
       "details": {
         "count": 36
@@ -30,7 +30,7 @@
     {
       "id": "group-a-telemetry/test-get-processes",
       "status": "pass",
-      "durationMs": 6154,
+      "durationMs": 1675,
       "notes": "Process query respected limit and row shape",
       "details": {
         "rows": 5
@@ -39,7 +39,7 @@
     {
       "id": "group-a-telemetry/test-get-screen-size",
       "status": "pass",
-      "durationMs": 1545,
+      "durationMs": 1107,
       "notes": "Screen metrics shape validated",
       "details": {
         "monitors": 1
@@ -48,7 +48,7 @@
     {
       "id": "group-a-telemetry/test-get-system-info",
       "status": "pass",
-      "durationMs": 4625,
+      "durationMs": 3418,
       "notes": "System info keys present",
       "details": {
         "hostname": "LAPTOP-GOMKH6MT",
@@ -58,7 +58,7 @@
     {
       "id": "group-b-file-ops/test-file-ops-scenario",
       "status": "pass",
-      "durationMs": 63,
+      "durationMs": 97,
       "notes": "file-ops-demo: scenario valid, catalog updated, MCP round-trip write→read→list all pass",
       "details": {
         "scenarioSteps": 3,
@@ -68,10 +68,10 @@
     {
       "id": "group-b-file-ops/test-get-env-vars",
       "status": "pass",
-      "durationMs": 13,
+      "durationMs": 8,
       "notes": "get_environment_vars: all-mode, prefix-filter, and named-lookup all work",
       "details": {
-        "totalVarCount": 83
+        "totalVarCount": 86
       }
     },
     {
@@ -94,16 +94,16 @@
     {
       "id": "group-b-file-ops/test-read-file",
       "status": "pass",
-      "durationMs": 4,
+      "durationMs": 7,
       "notes": "read_file returned correct content",
       "details": {
-        "path": "C:\\Users\\justi\\AppData\\Local\\Temp\\os-bridge-read-test-1778475510451.txt"
+        "path": "C:\\Users\\justi\\AppData\\Local\\Temp\\reflex-read-test-1785503947069.txt"
       }
     },
     {
       "id": "group-b-file-ops/test-write-file",
       "status": "pass",
-      "durationMs": 8,
+      "durationMs": 11,
       "notes": "write_file created and appended correctly; verified via read_file",
       "details": {
         "finalSize": 23
@@ -112,88 +112,82 @@
     {
       "id": "group-c-input-control/test-move-mouse-gates",
       "status": "pass",
-      "durationMs": 5,
+      "durationMs": 6,
       "notes": "move_mouse correctly blocked by both safety gates",
       "details": null
     },
     {
       "id": "group-e-control-state/test-control-state-transitions",
       "status": "pass",
-      "durationMs": 7,
+      "durationMs": 8,
       "notes": "Control state transitions behaved as expected",
       "details": null
     },
     {
       "id": "group-e-control-state/test-execution-profile",
       "status": "pass",
-      "durationMs": 3,
+      "durationMs": 4,
       "notes": "Execution profile mode toggling verified",
       "details": null
     },
     {
       "id": "group-f-visual/test-get-window-rect",
       "status": "pass",
-      "durationMs": 5594,
+      "durationMs": 4590,
       "notes": "get_window_rect: error case and shape validation passed",
       "details": {
-        "windowTested": "ChatGPT - Google Chrome",
+        "windowTested": "Settings",
         "rect": {
-          "x": 9,
-          "y": 9,
-          "w": 1051,
-          "h": 798
+          "x": 569,
+          "y": 88,
+          "w": 645,
+          "h": 411
         }
       }
     },
     {
       "id": "group-f-visual/test-screenshot-window",
       "status": "pass",
-      "durationMs": 8138,
+      "durationMs": 7618,
       "notes": "screenshot_window: fallback + real window capture both pass",
       "details": {
-        "windowCaptured": "ChatGPT - Google Chrome",
-        "imageSizeKB": 39,
+        "windowCaptured": "Settings",
+        "imageSizeKB": 10,
         "captureMethod": "print-window",
-        "focusVerified": true
+        "focusVerified": false
       }
     },
     {
       "id": "group-g-shell-sessions/test-shell-session-lifecycle",
       "status": "pass",
-      "durationMs": 3402,
+      "durationMs": 1429,
       "notes": "shell_open / shell_send / shell_read / shell_list_sessions / shell_close all pass",
       "details": {
-        "sessionId": "eb09c84e…"
+        "sessionId": "c14c5118…"
       }
     },
     {
       "id": "group-h-process-intel",
       "status": "pass",
-      "durationMs": 13254,
+      "durationMs": 8379,
       "notes": "Process intelligence tools returned expected structures and wait/process checks passed",
       "details": {
         "topCpuRows": 3,
         "treeNodes": 1,
-        "summaryRows": 17,
+        "summaryRows": 19,
         "connectionRows": 25
       }
     },
     {
       "id": "group-i-window-intel",
-      "status": "pass",
-      "durationMs": 15804,
-      "notes": "Window intelligence tools returned expected structures and selector parity checks passed",
-      "details": {
-        "visibleWindows": 5,
-        "focusedTitle": "ChatGPT - Google Chrome",
-        "focusedAfterFocusTitle": "ChatGPT - Google Chrome",
-        "hierarchyNodes": 10
-      }
+      "status": "fail",
+      "durationMs": 6573,
+      "error": "focus_window by pid failed: Unable to verify foreground focus for: Settings\r\nAt C:\\Users\\justi\\AppData\\Local\\Temp\\osb_1785503971200_3g5wdi1be7b.ps1:101 char:3\r\n+   throw \"Unable to verify foreground focus for: $($proc.MainWindowTit ...\r\n+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : OperationStopped: (Unable to verif...s for: Settings:String) [], RuntimeException\r\n    + FullyQualifiedErrorId : Unable to verify foreground focus for: Settings"
     },
     {
       "id": "group-j-file-intel",
       "status": "pass",
-      "durationMs": 21,
+      "durationMs": 45,
       "notes": "File system intelligence tools all returned expected structures",
       "details": {
         "testedTools": [
@@ -208,8 +202,8 @@
     {
       "id": "group-k-diagnostics",
       "status": "pass",
-      "durationMs": 9083,
-      "notes": "check_service_status: Spooler found, status=Running; check_service_status: missing service correctly returned found=false; get_installed_software: 5 Microsoft entries found; get_startup_items: 9 startup items; get_event_log_entries: 5 Application log entries",
+      "durationMs": 8387,
+      "notes": "check_service_status: Spooler found, status=Running; check_service_status: missing service correctly returned found=false; get_installed_software: 5 Microsoft entries found; get_startup_items: 12 startup items; get_event_log_entries: 5 Application log entries",
       "details": null
     },
     {
@@ -222,7 +216,7 @@
     {
       "id": "group-m-contracts",
       "status": "pass",
-      "durationMs": 6042,
+      "durationMs": 5729,
       "notes": "write_file required-arg validation envelope passed; enum validation check passed; additionalProperties enforcement passed; success structured envelope passed; image metadata envelope passed; unknown tool envelope passed",
       "details": {
         "checks": 6
@@ -231,7 +225,7 @@
     {
       "id": "group-n-workflows",
       "status": "pass",
-      "durationMs": 16451,
+      "durationMs": 11612,
       "notes": "workflow happy path passed; workflow continueOnError path passed; workflow stopOnFail path passed; workflow recursion guard passed; workflow watch-mode gating passed; workflow watch-mode override passed; continuous_mcp_improvement prompt listed",
       "details": {
         "runbookTool": true,
@@ -241,10 +235,10 @@
     {
       "id": "integration/test-clipboard-roundtrip",
       "status": "pass",
-      "durationMs": 2595,
+      "durationMs": 1756,
       "notes": "Clipboard roundtrip succeeded",
       "details": {
-        "tokenLength": 33
+        "tokenLength": 30
       }
     }
   ]

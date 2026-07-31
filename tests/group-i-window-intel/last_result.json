@@ -1,16 +1,10 @@
 {
-  "timestamp": "2026-05-11T04:59:16.724Z",
-  "runStamp": "2026-05-11_005811",
+  "timestamp": "2026-07-31T13:19:35.747Z",
+  "runStamp": "2026-07-31_091856",
   "includeDangerous": false,
   "testFile": "group-i-window-intel/test.js",
   "id": "group-i-window-intel",
-  "status": "pass",
-  "durationMs": 15804,
-  "notes": "Window intelligence tools returned expected structures and selector parity checks passed",
-  "details": {
-    "visibleWindows": 5,
-    "focusedTitle": "ChatGPT - Google Chrome",
-    "focusedAfterFocusTitle": "ChatGPT - Google Chrome",
-    "hierarchyNodes": 10
-  }
+  "status": "fail",
+  "durationMs": 6573,
+  "error": "focus_window by pid failed: Unable to verify foreground focus for: Settings\r\nAt C:\\Users\\justi\\AppData\\Local\\Temp\\osb_1785503971200_3g5wdi1be7b.ps1:101 char:3\r\n+   throw \"Unable to verify foreground focus for: $($proc.MainWindowTit ...\r\n+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : OperationStopped: (Unable to verif...s for: Settings:String) [], RuntimeException\r\n    + FullyQualifiedErrorId : Unable to verify foreground focus for: Settings"
 }

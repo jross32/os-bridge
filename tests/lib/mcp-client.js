@@ -33,7 +33,7 @@ class McpClient {
     await this.request('initialize', {
       protocolVersion: '2024-11-05',
       capabilities: {},
-      clientInfo: { name: 'os-bridge-tests', version: '1.0.0' },
+      clientInfo: { name: 'reflex-tests', version: '1.0.0' },
     });
   }
 

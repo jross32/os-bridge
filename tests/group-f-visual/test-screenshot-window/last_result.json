@@ -1,16 +1,16 @@
 {
-  "timestamp": "2026-05-11T04:58:44.245Z",
-  "runStamp": "2026-05-11_005811",
+  "timestamp": "2026-07-31T13:19:19.346Z",
+  "runStamp": "2026-07-31_091856",
   "includeDangerous": false,
   "testFile": "group-f-visual/test-screenshot-window/test.js",
   "id": "group-f-visual/test-screenshot-window",
   "status": "pass",
-  "durationMs": 8138,
+  "durationMs": 7618,
   "notes": "screenshot_window: fallback + real window capture both pass",
   "details": {
-    "windowCaptured": "ChatGPT - Google Chrome",
-    "imageSizeKB": 39,
+    "windowCaptured": "Settings",
+    "imageSizeKB": 10,
     "captureMethod": "print-window",
-    "focusVerified": true
+    "focusVerified": false
   }
 }

@@ -62,7 +62,7 @@ class TestReporter {
 
   _toHumanMarkdown(payload) {
     const lines = [];
-    lines.push('# OS-Bridge Test Run');
+    lines.push('# Reflex Test Run');
     lines.push(`- Timestamp: ${payload.timestamp}`);
     lines.push(`- Node: ${payload.environment.node}`);
     lines.push(`- Platform: ${payload.environment.platform} ${payload.environment.release}`);

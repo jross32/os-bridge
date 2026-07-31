@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-11T04:59:48.355Z",
-  "runStamp": "2026-05-11_005811",
+  "timestamp": "2026-07-31T13:20:01.559Z",
+  "runStamp": "2026-07-31_091856",
   "includeDangerous": false,
   "testFile": "group-n-workflows/test.js",
   "id": "group-n-workflows",
   "status": "pass",
-  "durationMs": 16451,
+  "durationMs": 11612,
   "notes": "workflow happy path passed; workflow continueOnError path passed; workflow stopOnFail path passed; workflow recursion guard passed; workflow watch-mode gating passed; workflow watch-mode override passed; continuous_mcp_improvement prompt listed",
   "details": {
     "runbookTool": true,

@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * os-bridge — MCP server
+ * reflex — MCP server
  * Gives AI agents full OS-level access on Windows:
  *   • System info (CPU/RAM/disk/processes/ports)
  *   • Mouse, keyboard, scroll, drag
@@ -117,7 +117,7 @@ async function shellSend(args) {
   session.errorBuf  = '';
 
   const timeoutMs = Number.isFinite(args.timeoutMs) ? args.timeoutMs : 8000;
-  const sentinel  = `__OS_BRIDGE_DONE_${crypto.randomUUID().replace(/-/g, '')}__`;
+  const sentinel  = `__REFLEX_DONE_${crypto.randomUUID().replace(/-/g, '')}__`;
 
   // For PowerShell: append sentinel echo after command. For cmd: use & echo.
   const marker = session.shell === 'cmd'
@@ -218,7 +218,7 @@ const executionProfile = {
   mode: 'quiet',
   announceActions: false,
   preActionDelayMs: 700,
-  notificationTitle: 'os-bridge',
+  notificationTitle: 'reflex',
   autoApproveThrough: 'medium',
 };
 
@@ -850,7 +850,7 @@ async function writeClipboard(args) {
 
 async function sendNotification(args) {
   if (!args.message) throw new Error('message required');
-  const title   = (args.title   || 'OS Bridge').replace(/'/g, "''");
+  const title   = (args.title   || 'Reflex').replace(/'/g, "''");
   const message = args.message.replace(/'/g, "''");
   const script = `
 Add-Type -AssemblyName System.Windows.Forms
@@ -2227,7 +2227,7 @@ function setExecutionProfile(args) {
 
   if (args.notificationTitle != null) {
     const title = String(args.notificationTitle || '').trim();
-    executionProfile.notificationTitle = title || 'os-bridge';
+    executionProfile.notificationTitle = title || 'reflex';
   }
 
   if (args.autoApproveThrough != null) {
@@ -2730,9 +2730,9 @@ async function getPowerPlan() {
   return { plans, active: plans.find(p => p.active) || null };
 }
 
-function osBridgeMeta() {
+function reflexMeta() {
   return {
-    name: 'os-bridge',
+    name: 'reflex',
     version: SERVER_VERSION,
     toolCount: TOOLS.length,
     platform: process.platform,
@@ -3048,7 +3048,7 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        title:   { type: 'string', description: 'Notification title (default: OS Bridge)' },
+        title:   { type: 'string', description: 'Notification title (default: Reflex)' },
         message: { type: 'string', description: 'Body text' },
       },
       required: ['message'],
@@ -3241,7 +3241,7 @@ const TOOLS = [
   },
   {
     name: 'get_environment_vars',
-    description: 'List environment variables visible to the os-bridge process. Optionally filter by prefix.',
+    description: 'List environment variables visible to the reflex process. Optionally filter by prefix.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3721,8 +3721,8 @@ const TOOLS = [
     inputSchema: { type: 'object', properties: {} },
   },
   {
-    name: 'os_bridge_meta',
-    description: 'Get os-bridge metadata: version, tool count, capabilities summary, and platform info.',
+    name: 'reflex_meta',
+    description: 'Get reflex metadata: version, tool count, capabilities summary, and platform info.',
     inputSchema: { type: 'object', properties: {} },
   },
 ];
@@ -4000,9 +4000,9 @@ async function handleTool(name, args) {
     case 'shell_list_sessions':   return shellListSessions();
     case 'get_control_state': {
       const ctrlState = getControlState();
-      const ctrlItems = [{ name: 'os-bridge', type: 'control-profile', status: ctrlState.inputAllowed ? 'active' : 'blocked', method: ctrlState.executionProfile?.mode || 'quiet' }];
+      const ctrlItems = [{ name: 'reflex', type: 'control-profile', status: ctrlState.inputAllowed ? 'active' : 'blocked', method: ctrlState.executionProfile?.mode || 'quiet' }];
       return { ...ctrlState, status: 'ok', type: 'control', name: 'control_state',
-        title: 'OS Bridge Control State', message: `Input ${ctrlState.inputAllowed ? 'allowed' : 'blocked'}, profile: ${ctrlState.executionProfile?.mode || 'quiet'}`,
+        title: 'Reflex Control State', message: `Input ${ctrlState.inputAllowed ? 'allowed' : 'blocked'}, profile: ${ctrlState.executionProfile?.mode || 'quiet'}`,
         count: 1, total: 1,
         items: ctrlItems, results: ctrlItems };
     }
@@ -4129,11 +4129,11 @@ async function handleTool(name, args) {
     }
     case 'list_fonts':              return listFonts(args);
     case 'get_power_plan':          return getPowerPlan();
-    case 'os_bridge_meta': {
-      const metaResult = osBridgeMeta();
-      const metaItems = [{ name: 'os-bridge', type: 'server', status: 'ok', version: metaResult.version || '' }];
+    case 'reflex_meta': {
+      const metaResult = reflexMeta();
+      const metaItems = [{ name: 'reflex', type: 'server', status: 'ok', version: metaResult.version || '' }];
       return { ...metaResult, status: 'ok', type: 'server_meta',
-        title: `os-bridge v${metaResult.version}`, message: `os-bridge MCP server with ${metaResult.toolCount} tools on ${metaResult.platform}/${metaResult.arch}.`,
+        title: `reflex v${metaResult.version}`, message: `reflex MCP server with ${metaResult.toolCount} tools on ${metaResult.platform}/${metaResult.arch}.`,
         count: metaResult.toolCount, total: metaResult.toolCount, data: { toolCount: metaResult.toolCount },
         items: metaItems, results: metaItems };
     }
@@ -4217,7 +4217,7 @@ function startHealthServer(port) {
         tools: TOOLS.length,
         prompts: PROMPTS.length,
         version: SERVER_VERSION,
-        name: 'os-bridge',
+        name: 'reflex',
         transport: 'stdio',
         healthPort: port,
       }));
@@ -4230,7 +4230,7 @@ function startHealthServer(port) {
       const promptRows = PROMPTS.map((p) =>
         `<tr><td><code>${p.name}</code></td><td>${p.description || ''}</td></tr>`
       ).join('\n');
-      res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>os-bridge</title>
+      res.end(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>reflex</title>
 <style>
   body{font-family:system-ui,sans-serif;max-width:960px;margin:40px auto;padding:0 20px;line-height:1.5;color:#222}
   h1{color:#1a1a2e}h2{color:#16213e;border-bottom:2px solid #eee;padding-bottom:6px;margin-top:32px}
@@ -4246,7 +4246,7 @@ function startHealthServer(port) {
   .links a:hover{background:#dbeafe}
 </style></head>
 <body>
-<h1>os-bridge <span class="badge">v${SERVER_VERSION}</span></h1>
+<h1>reflex <span class="badge">v${SERVER_VERSION}</span></h1>
 <p>Windows OS automation MCP server — system monitoring, mouse/keyboard input, window management, clipboard, file operations, and persistent shell sessions.</p>
 <div class="links">
   <a href="/health">/health — JSON status</a>
@@ -4254,7 +4254,7 @@ function startHealthServer(port) {
   <a href="/docs">/docs — this page</a>
 </div>
 <p><strong>Transport:</strong> stdio (MCP JSON-RPC protocol)</p>
-<p><strong>Use with Claude Code:</strong> Add <code>"os-bridge"</code> to <code>~/.claude/mcp.json</code> with env <code>OS_BRIDGE_HEALTH_PORT=11300</code>.</p>
+<p><strong>Use with Claude Code:</strong> Add <code>"reflex"</code> to <code>~/.claude/mcp.json</code> with env <code>REFLEX_HEALTH_PORT=11300</code>.</p>
 <p><strong>Use with any AI:</strong> Any AI client supporting the MCP stdio protocol works — start with <code>node mcp-server.js</code> and pipe JSON-RPC messages to stdin.</p>
 <h2>Tools (${TOOLS.length})</h2>
 <table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody>
@@ -4280,15 +4280,17 @@ ${promptRows}
   }
 
   http.createServer(handleRequest).listen(port, () => {
-    process.stderr.write(`[os-bridge] Health+docs server → http://localhost:${port}/health\n`);
-    process.stderr.write(`[os-bridge] Human docs         → http://localhost:${port}/docs\n`);
-    process.stderr.write(`[os-bridge] ${TOOLS.length} tools · ${PROMPTS.length} prompts · v${SERVER_VERSION}\n`);
+    process.stderr.write(`[reflex] Health+docs server → http://localhost:${port}/health\n`);
+    process.stderr.write(`[reflex] Human docs         → http://localhost:${port}/docs\n`);
+    process.stderr.write(`[reflex] ${TOOLS.length} tools · ${PROMPTS.length} prompts · v${SERVER_VERSION}\n`);
   });
 }
 
 {
-  const healthPort = parseInt(process.env.OS_BRIDGE_HEALTH_PORT || '11300');
-  if (process.argv.includes('--http') || process.env.OS_BRIDGE_HEALTH_PORT) {
+  // REFLEX_HEALTH_PORT is the current name; OS_BRIDGE_HEALTH_PORT stays as a fallback for existing configs.
+  const healthPortEnv = process.env.REFLEX_HEALTH_PORT || process.env.OS_BRIDGE_HEALTH_PORT;
+  const healthPort = parseInt(healthPortEnv || '11300');
+  if (process.argv.includes('--http') || healthPortEnv) {
     startHealthServer(healthPort);
   }
 }
@@ -4315,7 +4317,7 @@ rl.on('line', async (rawLine) => {
         result = {
           protocolVersion: '2024-11-05',
           capabilities: { tools: { listChanged: false }, prompts: { listChanged: false } },
-          serverInfo: { name: 'os-bridge', version: SERVER_VERSION },
+          serverInfo: { name: 'reflex', version: SERVER_VERSION },
         };
         break;
 

@@ -7,7 +7,7 @@ const { assert } = require('../../lib/assertions');
 
 module.exports = {
   async run({ client }) {
-    const tmpPath = path.join(os.tmpdir(), `os-bridge-write-test-${Date.now()}.txt`);
+    const tmpPath = path.join(os.tmpdir(), `reflex-write-test-${Date.now()}.txt`);
 
     try {
       // Write new file

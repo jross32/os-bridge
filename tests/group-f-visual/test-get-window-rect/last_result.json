@@ -1,19 +1,19 @@
 {
-  "timestamp": "2026-05-11T04:58:36.098Z",
-  "runStamp": "2026-05-11_005811",
+  "timestamp": "2026-07-31T13:19:11.722Z",
+  "runStamp": "2026-07-31_091856",
   "includeDangerous": false,
   "testFile": "group-f-visual/test-get-window-rect/test.js",
   "id": "group-f-visual/test-get-window-rect",
   "status": "pass",
-  "durationMs": 5594,
+  "durationMs": 4590,
   "notes": "get_window_rect: error case and shape validation passed",
   "details": {
-    "windowTested": "ChatGPT - Google Chrome",
+    "windowTested": "Settings",
     "rect": {
-      "x": 9,
-      "y": 9,
-      "w": 1051,
-      "h": 798
+      "x": 569,
+      "y": 88,
+      "w": 645,
+      "h": 411
     }
   }
 }

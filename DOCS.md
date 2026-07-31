@@ -1,4 +1,4 @@
-# os-bridge Operator Guide
+# reflex Operator Guide
 
 Use this server when an AI client needs real Windows OS access rather than repository-only analysis.
 

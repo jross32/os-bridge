@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-11T04:58:24.139Z",
-  "runStamp": "2026-05-11_005811",
+  "timestamp": "2026-07-31T13:19:02.370Z",
+  "runStamp": "2026-07-31_091856",
   "includeDangerous": false,
   "testFile": "group-a-telemetry/test-get-processes/test.js",
   "id": "group-a-telemetry/test-get-processes",
   "status": "pass",
-  "durationMs": 6154,
+  "durationMs": 1675,
   "notes": "Process query respected limit and row shape",
   "details": {
     "rows": 5
