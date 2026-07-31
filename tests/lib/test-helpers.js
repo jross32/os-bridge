@@ -4,8 +4,12 @@ const fs = require('fs');
 const path = require('path');
 
 async function normalizeControlState(client) {
+  await client.callTool('release_control');
   await client.callTool('reset_emergency_stop');
-  await client.callTool('resume_control');
+  await client.callTool('request_control', {
+    agentName: 'Reflex test runner',
+    showOverlay: false,
+  });
 }
 
 function ensureDir(dirPath) {

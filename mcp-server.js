@@ -212,6 +212,9 @@ function shellListSessions() {
 const ctrl = {
   emergencyStopped: false,
   userPaused:       false,
+  controlGranted:   false,
+  controlOwner:     null,
+  controlGrantedAt: null,
 };
 
 const executionProfile = {
@@ -222,9 +225,237 @@ const executionProfile = {
   autoApproveThrough: 'medium',
 };
 
+let connectedClientInfo = {};
+
+const controlOverlay = {
+  proc: null,
+  commandDir: null,
+  statusPath: null,
+  agentName: null,
+  cursorHighlight: true,
+  startedAt: null,
+  lastError: null,
+};
+
+function normalizeAgentName(value) {
+  const raw = String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
+  if (!raw) return 'AI';
+  const lower = raw.toLowerCase();
+  if (lower.includes('codex')) return 'Codex';
+  if (lower.includes('claude')) return 'Claude';
+  if (lower.includes('chatgpt')) return 'ChatGPT';
+  return raw.slice(0, 48);
+}
+
+function resolveControlOwner(args = {}) {
+  return normalizeAgentName(
+    args.agentName
+      || process.env.REFLEX_AGENT_NAME
+      || process.env.SYNAPSE_AGENT_LABEL
+      || process.env.SYNAPSE_RUNTIME_ID
+      || connectedClientInfo.name
+      || 'AI'
+  );
+}
+
+function overlaySnapshot() {
+  const disabled = process.env.REFLEX_DISABLE_OVERLAY === '1';
+  return {
+    active: Boolean(controlOverlay.proc && !controlOverlay.proc.killed),
+    status: disabled ? 'disabled' : controlOverlay.proc ? 'active' : 'stopped',
+    agentName: controlOverlay.agentName,
+    cursorHighlight: controlOverlay.cursorHighlight,
+    startedAt: controlOverlay.startedAt,
+    controls: ['pause', 'resume', 'release', 'emergency_stop', 'exit_process'],
+    escapeBehavior: 'A physical Esc key activates the sticky emergency stop; injected Esc is ignored.',
+    lastError: controlOverlay.lastError,
+  };
+}
+
+function writeOverlayStatus(status) {
+  if (!controlOverlay.statusPath) return;
+  try {
+    fs.writeFileSync(controlOverlay.statusPath, status, 'utf8');
+  } catch {
+    // The overlay is best-effort after launch. Its child-exit handler fails closed.
+  }
+}
+
+function cleanupOverlayDirectory(dir) {
+  if (!dir) return;
+  try { fs.rmSync(dir, { recursive: true, force: true }); } catch {}
+}
+
+function stopControlOverlay() {
+  const proc = controlOverlay.proc;
+  const dir = controlOverlay.commandDir;
+  const statusPath = controlOverlay.statusPath;
+  controlOverlay.proc = null;
+  controlOverlay.commandDir = null;
+  controlOverlay.statusPath = null;
+  if (proc && !proc.killed && proc.exitCode === null) {
+    proc.reflexIntentionalStop = true;
+    try { fs.writeFileSync(statusPath, 'closing', 'utf8'); } catch {}
+    const forceClose = setTimeout(() => {
+      if (proc.exitCode === null) {
+        try { proc.kill(); } catch {}
+      }
+      cleanupOverlayDirectory(dir);
+    }, 1500);
+    forceClose.unref();
+  } else {
+    cleanupOverlayDirectory(dir);
+  }
+  controlOverlay.agentName = null;
+  controlOverlay.startedAt = null;
+}
+
+function applyOverlayCommand(command) {
+  switch (command) {
+    case 'pause':
+      ctrl.userPaused = true;
+      writeOverlayStatus('paused');
+      break;
+    case 'resume':
+      if (!ctrl.emergencyStopped && ctrl.controlGranted) {
+        ctrl.userPaused = false;
+        writeOverlayStatus('active');
+      }
+      break;
+    case 'release':
+      ctrl.controlGranted = false;
+      ctrl.controlOwner = null;
+      ctrl.controlGrantedAt = null;
+      ctrl.userPaused = false;
+      stopControlOverlay();
+      break;
+    case 'emergency':
+      ctrl.emergencyStopped = true;
+      ctrl.userPaused = false;
+      ctrl.controlGranted = false;
+      ctrl.controlOwner = null;
+      ctrl.controlGrantedAt = null;
+      stopControlOverlay();
+      break;
+    case 'exit':
+      ctrl.emergencyStopped = true;
+      ctrl.userPaused = false;
+      ctrl.controlGranted = false;
+      ctrl.controlOwner = null;
+      ctrl.controlGrantedAt = null;
+      stopControlOverlay();
+      setImmediate(() => {
+        cleanupBeforeExit();
+        process.exit(0);
+      });
+      break;
+    default:
+      break;
+  }
+}
+
+function processOverlayCommands() {
+  const dir = controlOverlay.commandDir;
+  if (!dir) return;
+  let files = [];
+  try {
+    files = fs.readdirSync(dir).filter((name) => name.endsWith('.cmd')).sort();
+  } catch {
+    return;
+  }
+  for (const name of files) {
+    const fullPath = path.join(dir, name);
+    let command = '';
+    try {
+      command = fs.readFileSync(fullPath, 'utf8').trim().toLowerCase();
+      fs.unlinkSync(fullPath);
+    } catch {
+      continue;
+    }
+    applyOverlayCommand(command);
+    if (!controlOverlay.commandDir) break;
+  }
+}
+
+function startControlOverlay(agentName, { cursorHighlight = true } = {}) {
+  stopControlOverlay();
+  controlOverlay.lastError = null;
+  controlOverlay.agentName = agentName;
+  controlOverlay.cursorHighlight = cursorHighlight;
+
+  if (process.env.REFLEX_DISABLE_OVERLAY === '1') {
+    return overlaySnapshot();
+  }
+  if (process.platform !== 'win32') {
+    throw new Error('The Reflex takeover overlay is available on Windows only.');
+  }
+
+  const overlayScript = path.join(__dirname, 'scripts', 'reflex-overlay.ps1');
+  if (!fs.existsSync(overlayScript)) {
+    throw new Error(`Takeover overlay script not found: ${overlayScript}`);
+  }
+
+  const commandDir = fs.mkdtempSync(path.join(os.tmpdir(), 'reflex-overlay-'));
+  const statusPath = path.join(commandDir, 'status.txt');
+  fs.writeFileSync(statusPath, ctrl.userPaused ? 'paused' : 'active', 'utf8');
+
+  const child = spawn(
+    'powershell.exe',
+    ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', overlayScript],
+    {
+      windowsHide: true,
+      stdio: ['ignore', 'ignore', 'pipe'],
+      env: {
+        ...process.env,
+        REFLEX_OVERLAY_AGENT: agentName,
+        REFLEX_OVERLAY_COMMAND_DIR: commandDir,
+        REFLEX_OVERLAY_STATUS_PATH: statusPath,
+        REFLEX_OVERLAY_PARENT_PID: String(process.pid),
+        REFLEX_OVERLAY_CURSOR_HALO: cursorHighlight ? '1' : '0',
+      },
+    }
+  );
+
+  controlOverlay.proc = child;
+  controlOverlay.commandDir = commandDir;
+  controlOverlay.statusPath = statusPath;
+  controlOverlay.startedAt = new Date().toISOString();
+  child.reflexIntentionalStop = false;
+  let stderr = '';
+  child.stderr.on('data', (chunk) => { stderr += chunk.toString('utf8'); });
+  child.on('error', (error) => {
+    controlOverlay.lastError = error.message;
+  });
+  child.on('exit', (code) => {
+    const isCurrent = controlOverlay.proc === child;
+    const intentional = child.reflexIntentionalStop === true;
+    if (isCurrent) {
+      controlOverlay.proc = null;
+      controlOverlay.commandDir = null;
+      controlOverlay.statusPath = null;
+    }
+    if (isCurrent && !intentional && ctrl.controlGranted) {
+      ctrl.emergencyStopped = true;
+      ctrl.userPaused = false;
+      ctrl.controlGranted = false;
+      ctrl.controlOwner = null;
+      ctrl.controlGrantedAt = null;
+      controlOverlay.lastError = stderr.trim() || `Overlay exited unexpectedly (${code}).`;
+    }
+    cleanupOverlayDirectory(commandDir);
+  });
+
+  return overlaySnapshot();
+}
+
+const overlayCommandPoll = setInterval(processOverlayCommands, 80);
+overlayCommandPoll.unref();
+
 function checkInputAllowed() {
+  processOverlayCommands();
   if (ctrl.emergencyStopped) throw new Error('EMERGENCY_STOP is active. Call reset_emergency_stop to re-enable input tools.');
   if (ctrl.userPaused)       throw new Error('User has paused AI input control. Call resume_control to re-enable.');
+  if (!ctrl.controlGranted)  throw new Error('No AI input lease is active. Call request_control to show the user visible takeover controls.');
 }
 
 function sleep(ms) {
@@ -2205,7 +2436,9 @@ async function workflowRunbookExecute(args) {
 function getExecutionProfile() {
   return {
     ...executionProfile,
-    humanTakeoverHint: 'Use pause_control or emergency_stop to take over instantly.',
+    humanTakeoverHint: ctrl.controlGranted
+      ? 'Use the overlay Pause/Release/Emergency stop/Exit Reflex controls; physical Esc is the last-resort emergency stop.'
+      : 'Call request_control before using input tools so the user gets visible takeover controls.',
   };
 }
 
@@ -2250,53 +2483,101 @@ function setExecutionProfile(args) {
 
 // ── Control state tools ───────────────────────────────────────────────────────
 function getControlState() {
+  processOverlayCommands();
   return {
     emergencyStopped: ctrl.emergencyStopped,
     userPaused:       ctrl.userPaused,
-    inputAllowed:     !ctrl.emergencyStopped && !ctrl.userPaused,
+    controlGranted:   ctrl.controlGranted,
+    controlOwner:     ctrl.controlOwner,
+    controlGrantedAt: ctrl.controlGrantedAt,
+    inputAllowed:     ctrl.controlGranted && !ctrl.emergencyStopped && !ctrl.userPaused,
     executionProfile: getExecutionProfile(),
-    hint: !ctrl.emergencyStopped && !ctrl.userPaused
+    overlay:          overlaySnapshot(),
+    hint: ctrl.controlGranted && !ctrl.emergencyStopped && !ctrl.userPaused
       ? 'Input tools (mouse/keyboard/window) are ready to use.'
       : ctrl.emergencyStopped
         ? 'EMERGENCY_STOP active — call reset_emergency_stop to re-enable.'
-        : 'User has paused control — call resume_control to re-enable.',
+        : ctrl.userPaused
+          ? 'User has paused control — call resume_control to re-enable.'
+          : 'No active input lease — call request_control to show visible takeover controls.',
   };
 }
 
-function requestControl() {
+function requestControl(args = {}) {
+  processOverlayCommands();
   if (ctrl.emergencyStopped) return { granted: false, reason: 'EMERGENCY_STOP active. Call reset_emergency_stop first.' };
   if (ctrl.userPaused)       return { granted: false, reason: 'User has paused AI control. They must call resume_control.' };
-  return { granted: true, message: 'AI input control granted. Call release_control when done.' };
+  const agentName = resolveControlOwner(args);
+  ctrl.controlGranted = true;
+  ctrl.controlOwner = agentName;
+  ctrl.controlGrantedAt = new Date().toISOString();
+  try {
+    let overlay;
+    if (args.showOverlay === false) {
+      stopControlOverlay();
+      overlay = { ...overlaySnapshot(), status: 'suppressed', active: false, agentName };
+    } else {
+      overlay = startControlOverlay(agentName, { cursorHighlight: args.cursorHighlight !== false });
+    }
+    return {
+      granted: true,
+      agentName,
+      overlay,
+      message: `${agentName} input control granted. The user can Pause, Release, Emergency stop, Exit Reflex, or press physical Esc.`,
+    };
+  } catch (error) {
+    ctrl.emergencyStopped = true;
+    ctrl.controlGranted = false;
+    ctrl.controlOwner = null;
+    ctrl.controlGrantedAt = null;
+    ctrl.userPaused = false;
+    controlOverlay.lastError = error.message;
+    return {
+      granted: false,
+      reason: `Visible takeover controls could not start, so Reflex activated Emergency Stop: ${error.message}`,
+      overlay: overlaySnapshot(),
+    };
+  }
 }
 
 function releaseControl() {
-  return { released: true, message: 'AI input control released back to user.' };
+  ctrl.controlGranted = false;
+  ctrl.controlOwner = null;
+  ctrl.controlGrantedAt = null;
+  ctrl.userPaused = false;
+  stopControlOverlay();
+  return { released: true, message: 'AI input control released back to user.', overlay: overlaySnapshot() };
 }
 
 function pauseControl() {
+  if (!ctrl.controlGranted) return { paused: false, reason: 'No active AI control lease to pause.' };
   ctrl.userPaused = true;
-  return { paused: true, message: 'AI input tools paused by user. Call resume_control to re-enable.' };
+  writeOverlayStatus('paused');
+  return { paused: true, message: 'AI input tools paused by user. Use Resume in the overlay or call resume_control.' };
 }
 
 function resumeControl() {
   if (ctrl.emergencyStopped) return { resumed: false, reason: 'Emergency stop still active. Call reset_emergency_stop first.' };
+  if (!ctrl.controlGranted) return { resumed: false, reason: 'No active AI control lease to resume.' };
   ctrl.userPaused = false;
+  if (ctrl.controlGranted) writeOverlayStatus('active');
   return { resumed: true, message: 'AI input control resumed.' };
 }
 
 function emergencyStop() {
   ctrl.emergencyStopped = true;
+  ctrl.userPaused = false;
+  ctrl.controlGranted = false;
+  ctrl.controlOwner = null;
+  ctrl.controlGrantedAt = null;
+  stopControlOverlay();
   return { stopped: true, message: 'EMERGENCY STOP activated. All mouse/keyboard/window tools are now disabled. Call reset_emergency_stop to re-enable.' };
 }
 
 function resetEmergencyStop() {
   ctrl.emergencyStopped = false;
-  return { reset: true, message: 'Emergency stop cleared. Input tools are re-enabled.' };
-}
-
-function resetEmergencyStop() {
-  ctrl.emergencyStopped = false;
-  return { reset: true, message: 'Emergency stop cleared. Input tools are re-enabled.' };
+  ctrl.userPaused = false;
+  return { reset: true, message: 'Emergency stop cleared. Call request_control to begin a new visible input lease.' };
 }
 
 // ── v1.0.1–v2.5.0 new tool implementations ───────────────────────────────────
@@ -3361,17 +3642,25 @@ const TOOLS = [
   // ── Control state ─────────────────────────────────────────────────────────
   {
     name: 'get_control_state',
-    description: 'Check the current AI input control state: whether emergency stop or user pause is active.',
+    description: 'Check the current AI input lease, named owner, takeover overlay, pause state, and emergency-stop state.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'request_control',
-    description: 'AI announces it is about to use input tools. Returns whether control is granted. Advisory — input tools work regardless, but calling this is good practice.',
-    inputSchema: { type: 'object', properties: {} },
+    description: 'Begin a named AI input lease and show the user a topmost control strip with Pause/Resume, Release, Emergency stop, Exit Reflex, physical-Esc emergency stop, and an optional blue highlighted system cursor. Fails closed if the requested safety overlay cannot start.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agentName: { type: 'string', description: 'Human-readable AI name shown in the takeover strip. Defaults to MCP client identity (for example Codex or Claude).' },
+        showOverlay: { type: 'boolean', description: 'Show the takeover control strip (default true). Use false only for non-interactive tests.' },
+        cursorHighlight: { type: 'boolean', description: 'Replace the normal system cursor with the blue Reflex pointer while control is active (default true).' },
+      },
+      additionalProperties: false,
+    },
   },
   {
     name: 'release_control',
-    description: 'AI announces it has finished using input tools.',
+    description: 'End the current AI input lease, remove the overlay, and hand control back to the user.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
@@ -4006,7 +4295,7 @@ async function handleTool(name, args) {
         count: 1, total: 1,
         items: ctrlItems, results: ctrlItems };
     }
-    case 'request_control':     return requestControl();
+    case 'request_control':     return requestControl(args);
     case 'release_control':     return releaseControl();
     case 'pause_control':       return pauseControl();
     case 'resume_control':      return resumeControl();
@@ -4314,6 +4603,9 @@ rl.on('line', async (rawLine) => {
 
     switch (method) {
       case 'initialize':
+        connectedClientInfo = params?.clientInfo && typeof params.clientInfo === 'object'
+          ? { ...params.clientInfo }
+          : {};
         result = {
           protocolVersion: '2024-11-05',
           capabilities: { tools: { listChanged: false }, prompts: { listChanged: false } },
@@ -4375,6 +4667,24 @@ rl.on('line', async (rawLine) => {
   }
 });
 
-rl.on('close', () => process.exit(0));
-process.on('SIGTERM', () => process.exit(0));
-process.on('SIGINT',  () => process.exit(0));
+function cleanupBeforeExit() {
+  stopControlOverlay();
+  for (const session of shellSessions.values()) {
+    try { session.proc.stdin.end(); } catch {}
+    try { session.proc.kill(); } catch {}
+  }
+  shellSessions.clear();
+}
+
+rl.on('close', () => {
+  cleanupBeforeExit();
+  process.exit(0);
+});
+process.on('SIGTERM', () => {
+  cleanupBeforeExit();
+  process.exit(0);
+});
+process.on('SIGINT', () => {
+  cleanupBeforeExit();
+  process.exit(0);
+});

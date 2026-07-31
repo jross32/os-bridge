@@ -11,7 +11,11 @@ Windows-only MCP server for desktop automation, shell execution, screenshots, cl
 ## Safety Model
 
 - Some tools are observational and safe by default
-- Some tools are visibly interactive and can move the mouse, type, focus windows, or launch apps
+- Mouse, keyboard, and window-input tools require an active `request_control` lease
+- The lease shows a topmost strip naming the AI, with Pause/Resume, Release, Emergency stop, and Exit Reflex
+- While the AI has control, the real Windows cursor becomes a blue highlighted pointer; Pause or lease shutdown restores it
+- Only a physical Esc key triggers the sticky emergency stop; AI-injected Esc input is ignored
+- Any unexpected overlay exit fails closed and blocks further input
 - Dangerous tests are opt-in because they can affect the live desktop state
 
 ## Quick Start

@@ -5,7 +5,9 @@ const { McpClient } = require('./lib/mcp-client');
 
 async function main() {
   const rootDir = path.resolve(__dirname, '..');
-  const client = new McpClient(path.join(rootDir, 'mcp-server.js'));
+  const client = new McpClient(path.join(rootDir, 'mcp-server.js'), {
+    env: { REFLEX_DISABLE_OVERLAY: '0' },
+  });
 
   await client.start();
 
@@ -16,16 +18,20 @@ async function main() {
       mode: 'visible',
       announceActions: true,
       preActionDelayMs: 900,
-      notificationTitle: 'os-bridge visible mode',
+      notificationTitle: 'Reflex visible mode',
     });
 
-    const control = await client.callTool('request_control');
+    const control = await client.callTool('request_control', {
+      agentName: 'Reflex demo',
+      showOverlay: true,
+      cursorHighlight: true,
+    });
     if (!control.ok) {
       throw new Error(`request_control failed: ${control.error}`);
     }
 
     await client.callTool('send_notification', {
-      title: 'os-bridge',
+      title: 'Reflex',
       message: 'Visible demo starting: mouse wiggle in 1 second.',
     });
 
@@ -42,7 +48,7 @@ async function main() {
     await client.callTool('move_mouse', { x, y });
 
     await client.callTool('send_notification', {
-      title: 'os-bridge',
+      title: 'Reflex',
       message: 'Visible demo complete. Control returned to user.',
     });
 

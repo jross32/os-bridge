@@ -3,8 +3,9 @@
 const { spawn } = require('child_process');
 
 class McpClient {
-  constructor(serverScriptPath) {
+  constructor(serverScriptPath, options = {}) {
     this.serverScriptPath = serverScriptPath;
+    this.options = options;
     this.proc = null;
     this.nextId = 1;
     this.pending = new Map();
@@ -15,6 +16,11 @@ class McpClient {
     this.proc = spawn('node', [this.serverScriptPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
+      env: {
+        ...process.env,
+        REFLEX_DISABLE_OVERLAY: '1',
+        ...(this.options.env || {}),
+      },
     });
 
     this.proc.stdout.on('data', (chunk) => this._onStdout(chunk));
