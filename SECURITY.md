@@ -16,6 +16,10 @@ It can expose or affect local state, including files, clipboard contents, enviro
 - Keep the optional HTTP discovery helper private. It is unauthenticated and intended for local inspection, not remote access.
 - Ask a person before actions that transmit data, modify accounts, install software, alter services, delete content, or have financial/legal consequences.
 
+## Enforced policy modes
+
+`REFLEX_SECURITY_MODE=guarded` is the default. It blocks high-risk and sensitive-read tools before their implementation runs. An MCP client cannot change this state. A Windows owner can make a conscious, launch-time choice to use `REFLEX_SECURITY_MODE=developer` for a supervised development session. Optional `REFLEX_ALLOWED_PATHS` and `REFLEX_ALLOWED_APPS` values constrain file and named-application access, while `REFLEX_AUDIT_DIR` stores redacted durable action receipts.
+
 ## Reporting a vulnerability
 
 Please report suspected vulnerabilities privately to the repository owner rather than opening a public issue with exploit details. Include:

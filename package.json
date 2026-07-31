@@ -1,6 +1,6 @@
 {
   "name": "reflex",
-  "version": "2.6.1",
+  "version": "2.7.0",
   "description": "Reflex - OS-level MCP server: system monitor, mouse/keyboard control, window management, file search",
   "main": "mcp-server.js",
   "scripts": {

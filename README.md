@@ -88,6 +88,12 @@ While active, Reflex can replace the standard cursor with a blue highlighted poi
 
 `REFLEX_DISABLE_OVERLAY=1` is intended only for non-interactive automated tests. It preserves server-side lease enforcement but removes the human-visible strip, so it must not be used for ordinary supervised operation.
 
+### Launch-time security policy
+
+Reflex now starts in **guarded** mode by default. Guarded mode permits low-risk inspection only and blocks commands, persistent shells, mutations, process/service control, clipboard/environment reads, screenshots, and URL launching. This is deliberate: an MCP client cannot relax its own policy.
+
+For a supervised development session, the Windows owner—not the AI—may explicitly restart Reflex with `REFLEX_SECURITY_MODE=developer`. Narrow the session further with semicolon-separated `REFLEX_ALLOWED_PATHS` and `REFLEX_ALLOWED_APPS` values, and use `REFLEX_AUDIT_DIR` to choose where durable redacted action receipts are stored. Call `get_security_policy` before work and `get_action_receipts` afterward.
+
 ### Practical safety rules
 
 1. Prefer a direct application API or structured browser automation before using screen coordinates.

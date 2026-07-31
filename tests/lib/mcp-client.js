@@ -19,6 +19,9 @@ class McpClient {
       env: {
         ...process.env,
         REFLEX_DISABLE_OVERLAY: '1',
+        // The regression suite intentionally exercises write/process/window behavior.
+        // Production Reflex defaults to guarded mode; tests opt in explicitly.
+        REFLEX_SECURITY_MODE: 'developer',
         ...(this.options.env || {}),
       },
     });
