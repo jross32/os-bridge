@@ -15,6 +15,7 @@
     "ux:smoke": "node tests/ux-runner/run-ux.js --scenario smoke-basic",
     "ux:visible": "node tests/ux-runner/run-ux.js --scenario visible-mouse-demo --visible",
     "ux:agent-mode": "node tests/ux-runner/run-ux.js --scenario agent-mode-parity --profile agent-mode-visible --visible",
+    "ux:agent-watch": "node tests/ux-runner/run-ux.js --scenario agent-mode-parity --profile agent-mode-watch --visible",
     "ux:catalog": "node tests/ux-runner/refresh-catalog.js",
     "ux:interrupt-demo": "node tests/ux-runner/run-ux.js --scenario smoke-basic --stop-after 1",
     "ux:resume-demo": "node tests/ux-runner/run-ux.js --scenario smoke-basic --resume"

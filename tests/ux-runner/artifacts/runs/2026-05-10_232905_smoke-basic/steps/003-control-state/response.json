@@ -1,0 +1,127 @@
+{
+  "ok": true,
+  "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"emergencyStopped\": false,\n    \"userPaused\": false,\n    \"inputAllowed\": true,\n    \"executionProfile\": {\n      \"mode\": \"quiet\",\n      \"announceActions\": false,\n      \"preActionDelayMs\": 700,\n      \"notificationTitle\": \"os-bridge\",\n      \"humanTakeoverHint\": \"Use pause_control or emergency_stop to take over instantly.\"\n    },\n    \"hint\": \"Input tools (mouse/keyboard/window) are ready to use.\",\n    \"status\": \"ok\",\n    \"type\": \"control\",\n    \"name\": \"control_state\",\n    \"title\": \"OS Bridge Control State\",\n    \"message\": \"Input allowed, profile: quiet\",\n    \"count\": 1,\n    \"total\": 1,\n    \"items\": [\n      {\n        \"name\": \"os-bridge\",\n        \"type\": \"control-profile\",\n        \"status\": \"active\",\n        \"method\": \"quiet\"\n      }\n    ],\n    \"results\": [\n      {\n        \"name\": \"os-bridge\",\n        \"type\": \"control-profile\",\n        \"status\": \"active\",\n        \"method\": \"quiet\"\n      }\n    ]\n  }\n}",
+  "json": {
+    "emergencyStopped": false,
+    "userPaused": false,
+    "inputAllowed": true,
+    "executionProfile": {
+      "mode": "quiet",
+      "announceActions": false,
+      "preActionDelayMs": 700,
+      "notificationTitle": "os-bridge",
+      "humanTakeoverHint": "Use pause_control or emergency_stop to take over instantly."
+    },
+    "hint": "Input tools (mouse/keyboard/window) are ready to use.",
+    "status": "ok",
+    "type": "control",
+    "name": "control_state",
+    "title": "OS Bridge Control State",
+    "message": "Input allowed, profile: quiet",
+    "count": 1,
+    "total": 1,
+    "items": [
+      {
+        "name": "os-bridge",
+        "type": "control-profile",
+        "status": "active",
+        "method": "quiet"
+      }
+    ],
+    "results": [
+      {
+        "name": "os-bridge",
+        "type": "control-profile",
+        "status": "active",
+        "method": "quiet"
+      }
+    ]
+  },
+  "structured": {
+    "ok": true,
+    "data": {
+      "emergencyStopped": false,
+      "userPaused": false,
+      "inputAllowed": true,
+      "executionProfile": {
+        "mode": "quiet",
+        "announceActions": false,
+        "preActionDelayMs": 700,
+        "notificationTitle": "os-bridge",
+        "humanTakeoverHint": "Use pause_control or emergency_stop to take over instantly."
+      },
+      "hint": "Input tools (mouse/keyboard/window) are ready to use.",
+      "status": "ok",
+      "type": "control",
+      "name": "control_state",
+      "title": "OS Bridge Control State",
+      "message": "Input allowed, profile: quiet",
+      "count": 1,
+      "total": 1,
+      "items": [
+        {
+          "name": "os-bridge",
+          "type": "control-profile",
+          "status": "active",
+          "method": "quiet"
+        }
+      ],
+      "results": [
+        {
+          "name": "os-bridge",
+          "type": "control-profile",
+          "status": "active",
+          "method": "quiet"
+        }
+      ]
+    }
+  },
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"emergencyStopped\": false,\n    \"userPaused\": false,\n    \"inputAllowed\": true,\n    \"executionProfile\": {\n      \"mode\": \"quiet\",\n      \"announceActions\": false,\n      \"preActionDelayMs\": 700,\n      \"notificationTitle\": \"os-bridge\",\n      \"humanTakeoverHint\": \"Use pause_control or emergency_stop to take over instantly.\"\n    },\n    \"hint\": \"Input tools (mouse/keyboard/window) are ready to use.\",\n    \"status\": \"ok\",\n    \"type\": \"control\",\n    \"name\": \"control_state\",\n    \"title\": \"OS Bridge Control State\",\n    \"message\": \"Input allowed, profile: quiet\",\n    \"count\": 1,\n    \"total\": 1,\n    \"items\": [\n      {\n        \"name\": \"os-bridge\",\n        \"type\": \"control-profile\",\n        \"status\": \"active\",\n        \"method\": \"quiet\"\n      }\n    ],\n    \"results\": [\n      {\n        \"name\": \"os-bridge\",\n        \"type\": \"control-profile\",\n        \"status\": \"active\",\n        \"method\": \"quiet\"\n      }\n    ]\n  }\n}"
+      }
+    ],
+    "structuredContent": {
+      "ok": true,
+      "data": {
+        "emergencyStopped": false,
+        "userPaused": false,
+        "inputAllowed": true,
+        "executionProfile": {
+          "mode": "quiet",
+          "announceActions": false,
+          "preActionDelayMs": 700,
+          "notificationTitle": "os-bridge",
+          "humanTakeoverHint": "Use pause_control or emergency_stop to take over instantly."
+        },
+        "hint": "Input tools (mouse/keyboard/window) are ready to use.",
+        "status": "ok",
+        "type": "control",
+        "name": "control_state",
+        "title": "OS Bridge Control State",
+        "message": "Input allowed, profile: quiet",
+        "count": 1,
+        "total": 1,
+        "items": [
+          {
+            "name": "os-bridge",
+            "type": "control-profile",
+            "status": "active",
+            "method": "quiet"
+          }
+        ],
+        "results": [
+          {
+            "name": "os-bridge",
+            "type": "control-profile",
+            "status": "active",
+            "method": "quiet"
+          }
+        ]
+      }
+    },
+    "isError": false
+  }
+}

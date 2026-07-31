@@ -23,7 +23,7 @@ function validateProfile(profile) {
   assert(profile.executionProfile && typeof profile.executionProfile === 'object', 'Profile executionProfile is required');
 
   const mode = profile.executionProfile.mode;
-  assert(mode === 'quiet' || mode === 'visible', 'Profile mode must be quiet or visible');
+  assert(mode === 'quiet' || mode === 'visible' || mode === 'watch', 'Profile mode must be quiet, visible, or watch');
 }
 
 module.exports = {

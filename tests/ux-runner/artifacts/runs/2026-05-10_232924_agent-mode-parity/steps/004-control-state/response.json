@@ -1,0 +1,127 @@
+{
+  "ok": true,
+  "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"emergencyStopped\": false,\n    \"userPaused\": false,\n    \"inputAllowed\": true,\n    \"executionProfile\": {\n      \"mode\": \"visible\",\n      \"announceActions\": true,\n      \"preActionDelayMs\": 1000,\n      \"notificationTitle\": \"os-bridge agent mode\",\n      \"humanTakeoverHint\": \"Use pause_control or emergency_stop to take over instantly.\"\n    },\n    \"hint\": \"Input tools (mouse/keyboard/window) are ready to use.\",\n    \"status\": \"ok\",\n    \"type\": \"control\",\n    \"name\": \"control_state\",\n    \"title\": \"OS Bridge Control State\",\n    \"message\": \"Input allowed, profile: visible\",\n    \"count\": 1,\n    \"total\": 1,\n    \"items\": [\n      {\n        \"name\": \"os-bridge\",\n        \"type\": \"control-profile\",\n        \"status\": \"active\",\n        \"method\": \"visible\"\n      }\n    ],\n    \"results\": [\n      {\n        \"name\": \"os-bridge\",\n        \"type\": \"control-profile\",\n        \"status\": \"active\",\n        \"method\": \"visible\"\n      }\n    ]\n  }\n}",
+  "json": {
+    "emergencyStopped": false,
+    "userPaused": false,
+    "inputAllowed": true,
+    "executionProfile": {
+      "mode": "visible",
+      "announceActions": true,
+      "preActionDelayMs": 1000,
+      "notificationTitle": "os-bridge agent mode",
+      "humanTakeoverHint": "Use pause_control or emergency_stop to take over instantly."
+    },
+    "hint": "Input tools (mouse/keyboard/window) are ready to use.",
+    "status": "ok",
+    "type": "control",
+    "name": "control_state",
+    "title": "OS Bridge Control State",
+    "message": "Input allowed, profile: visible",
+    "count": 1,
+    "total": 1,
+    "items": [
+      {
+        "name": "os-bridge",
+        "type": "control-profile",
+        "status": "active",
+        "method": "visible"
+      }
+    ],
+    "results": [
+      {
+        "name": "os-bridge",
+        "type": "control-profile",
+        "status": "active",
+        "method": "visible"
+      }
+    ]
+  },
+  "structured": {
+    "ok": true,
+    "data": {
+      "emergencyStopped": false,
+      "userPaused": false,
+      "inputAllowed": true,
+      "executionProfile": {
+        "mode": "visible",
+        "announceActions": true,
+        "preActionDelayMs": 1000,
+        "notificationTitle": "os-bridge agent mode",
+        "humanTakeoverHint": "Use pause_control or emergency_stop to take over instantly."
+      },
+      "hint": "Input tools (mouse/keyboard/window) are ready to use.",
+      "status": "ok",
+      "type": "control",
+      "name": "control_state",
+      "title": "OS Bridge Control State",
+      "message": "Input allowed, profile: visible",
+      "count": 1,
+      "total": 1,
+      "items": [
+        {
+          "name": "os-bridge",
+          "type": "control-profile",
+          "status": "active",
+          "method": "visible"
+        }
+      ],
+      "results": [
+        {
+          "name": "os-bridge",
+          "type": "control-profile",
+          "status": "active",
+          "method": "visible"
+        }
+      ]
+    }
+  },
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"emergencyStopped\": false,\n    \"userPaused\": false,\n    \"inputAllowed\": true,\n    \"executionProfile\": {\n      \"mode\": \"visible\",\n      \"announceActions\": true,\n      \"preActionDelayMs\": 1000,\n      \"notificationTitle\": \"os-bridge agent mode\",\n      \"humanTakeoverHint\": \"Use pause_control or emergency_stop to take over instantly.\"\n    },\n    \"hint\": \"Input tools (mouse/keyboard/window) are ready to use.\",\n    \"status\": \"ok\",\n    \"type\": \"control\",\n    \"name\": \"control_state\",\n    \"title\": \"OS Bridge Control State\",\n    \"message\": \"Input allowed, profile: visible\",\n    \"count\": 1,\n    \"total\": 1,\n    \"items\": [\n      {\n        \"name\": \"os-bridge\",\n        \"type\": \"control-profile\",\n        \"status\": \"active\",\n        \"method\": \"visible\"\n      }\n    ],\n    \"results\": [\n      {\n        \"name\": \"os-bridge\",\n        \"type\": \"control-profile\",\n        \"status\": \"active\",\n        \"method\": \"visible\"\n      }\n    ]\n  }\n}"
+      }
+    ],
+    "structuredContent": {
+      "ok": true,
+      "data": {
+        "emergencyStopped": false,
+        "userPaused": false,
+        "inputAllowed": true,
+        "executionProfile": {
+          "mode": "visible",
+          "announceActions": true,
+          "preActionDelayMs": 1000,
+          "notificationTitle": "os-bridge agent mode",
+          "humanTakeoverHint": "Use pause_control or emergency_stop to take over instantly."
+        },
+        "hint": "Input tools (mouse/keyboard/window) are ready to use.",
+        "status": "ok",
+        "type": "control",
+        "name": "control_state",
+        "title": "OS Bridge Control State",
+        "message": "Input allowed, profile: visible",
+        "count": 1,
+        "total": 1,
+        "items": [
+          {
+            "name": "os-bridge",
+            "type": "control-profile",
+            "status": "active",
+            "method": "visible"
+          }
+        ],
+        "results": [
+          {
+            "name": "os-bridge",
+            "type": "control-profile",
+            "status": "active",
+            "method": "visible"
+          }
+        ]
+      }
+    },
+    "isError": false
+  }
+}

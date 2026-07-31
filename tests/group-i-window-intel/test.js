@@ -21,6 +21,11 @@ module.exports = {
     const focusByPid = await client.callTool('focus_window', { pid: first.pid });
     assert(focusByPid.ok, `focus_window by pid failed: ${focusByPid.error || focusByPid.text}`);
 
+    const focusedAfterFocus = await client.callTool('get_focused_app_state', {});
+    assert(focusedAfterFocus.ok, `Expected get_focused_app_state after focus_window success, got error: ${focusedAfterFocus.error}`);
+    assert(focusedAfterFocus.json && focusedAfterFocus.json.pid === first.pid,
+      `focus_window should make pid ${first.pid} foreground, got ${focusedAfterFocus.json && focusedAfterFocus.json.pid}`);
+
     const minRestore = await client.callTool('minimize_maximize_window', { pid: first.pid, action: 'restore' });
     assert(minRestore.ok, `minimize_maximize_window restore by pid failed: ${minRestore.error || minRestore.text}`);
 
@@ -55,6 +60,7 @@ module.exports = {
       details: {
         visibleWindows: wins.length,
         focusedTitle: focused.json.title,
+        focusedAfterFocusTitle: focusedAfterFocus.json.title,
         hierarchyNodes: nodes.length,
       },
     };

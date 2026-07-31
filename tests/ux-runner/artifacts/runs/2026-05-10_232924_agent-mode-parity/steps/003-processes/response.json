@@ -1,0 +1,229 @@
+{
+  "ok": true,
+  "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"processes\": [\n      {\n        \"Id\": 32496,\n        \"ProcessName\": \"pwsh\",\n        \"CpuS\": 94.88,\n        \"MemMB\": 3235.7,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 7272,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 3633.44,\n        \"MemMB\": 1029,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 2064,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 699,\n        \"MemMB\": 445.6,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 5196,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 2583.33,\n        \"MemMB\": 401.2,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 3632,\n        \"ProcessName\": \"Memory Compression\",\n        \"CpuS\": 0,\n        \"MemMB\": 361.4,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 9600,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 674.41,\n        \"MemMB\": 357.9,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 7364,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 2634.64,\n        \"MemMB\": 357.2,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 24856,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 1652.97,\n        \"MemMB\": 344.8,\n        \"MainWindowTitle\": \"\"\n      }\n    ],\n    \"count\": 8,\n    \"total\": 8,\n    \"status\": \"ok\",\n    \"type\": \"processes\",\n    \"name\": \"processes\",\n    \"title\": \"Running Processes\",\n    \"message\": \"Found 8 running process(es).\",\n    \"data\": {\n      \"count\": 8\n    }\n  }\n}",
+  "json": {
+    "processes": [
+      {
+        "Id": 32496,
+        "ProcessName": "pwsh",
+        "CpuS": 94.88,
+        "MemMB": 3235.7,
+        "MainWindowTitle": ""
+      },
+      {
+        "Id": 7272,
+        "ProcessName": "Code",
+        "CpuS": 3633.44,
+        "MemMB": 1029,
+        "MainWindowTitle": ""
+      },
+      {
+        "Id": 2064,
+        "ProcessName": "Code",
+        "CpuS": 699,
+        "MemMB": 445.6,
+        "MainWindowTitle": ""
+      },
+      {
+        "Id": 5196,
+        "ProcessName": "Code",
+        "CpuS": 2583.33,
+        "MemMB": 401.2,
+        "MainWindowTitle": ""
+      },
+      {
+        "Id": 3632,
+        "ProcessName": "Memory Compression",
+        "CpuS": 0,
+        "MemMB": 361.4,
+        "MainWindowTitle": ""
+      },
+      {
+        "Id": 9600,
+        "ProcessName": "Code",
+        "CpuS": 674.41,
+        "MemMB": 357.9,
+        "MainWindowTitle": ""
+      },
+      {
+        "Id": 7364,
+        "ProcessName": "Code",
+        "CpuS": 2634.64,
+        "MemMB": 357.2,
+        "MainWindowTitle": ""
+      },
+      {
+        "Id": 24856,
+        "ProcessName": "Code",
+        "CpuS": 1652.97,
+        "MemMB": 344.8,
+        "MainWindowTitle": ""
+      }
+    ],
+    "count": 8,
+    "total": 8,
+    "status": "ok",
+    "type": "processes",
+    "name": "processes",
+    "title": "Running Processes",
+    "message": "Found 8 running process(es).",
+    "data": {
+      "count": 8
+    }
+  },
+  "structured": {
+    "ok": true,
+    "data": {
+      "processes": [
+        {
+          "Id": 32496,
+          "ProcessName": "pwsh",
+          "CpuS": 94.88,
+          "MemMB": 3235.7,
+          "MainWindowTitle": ""
+        },
+        {
+          "Id": 7272,
+          "ProcessName": "Code",
+          "CpuS": 3633.44,
+          "MemMB": 1029,
+          "MainWindowTitle": ""
+        },
+        {
+          "Id": 2064,
+          "ProcessName": "Code",
+          "CpuS": 699,
+          "MemMB": 445.6,
+          "MainWindowTitle": ""
+        },
+        {
+          "Id": 5196,
+          "ProcessName": "Code",
+          "CpuS": 2583.33,
+          "MemMB": 401.2,
+          "MainWindowTitle": ""
+        },
+        {
+          "Id": 3632,
+          "ProcessName": "Memory Compression",
+          "CpuS": 0,
+          "MemMB": 361.4,
+          "MainWindowTitle": ""
+        },
+        {
+          "Id": 9600,
+          "ProcessName": "Code",
+          "CpuS": 674.41,
+          "MemMB": 357.9,
+          "MainWindowTitle": ""
+        },
+        {
+          "Id": 7364,
+          "ProcessName": "Code",
+          "CpuS": 2634.64,
+          "MemMB": 357.2,
+          "MainWindowTitle": ""
+        },
+        {
+          "Id": 24856,
+          "ProcessName": "Code",
+          "CpuS": 1652.97,
+          "MemMB": 344.8,
+          "MainWindowTitle": ""
+        }
+      ],
+      "count": 8,
+      "total": 8,
+      "status": "ok",
+      "type": "processes",
+      "name": "processes",
+      "title": "Running Processes",
+      "message": "Found 8 running process(es).",
+      "data": {
+        "count": 8
+      }
+    }
+  },
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"processes\": [\n      {\n        \"Id\": 32496,\n        \"ProcessName\": \"pwsh\",\n        \"CpuS\": 94.88,\n        \"MemMB\": 3235.7,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 7272,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 3633.44,\n        \"MemMB\": 1029,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 2064,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 699,\n        \"MemMB\": 445.6,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 5196,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 2583.33,\n        \"MemMB\": 401.2,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 3632,\n        \"ProcessName\": \"Memory Compression\",\n        \"CpuS\": 0,\n        \"MemMB\": 361.4,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 9600,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 674.41,\n        \"MemMB\": 357.9,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 7364,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 2634.64,\n        \"MemMB\": 357.2,\n        \"MainWindowTitle\": \"\"\n      },\n      {\n        \"Id\": 24856,\n        \"ProcessName\": \"Code\",\n        \"CpuS\": 1652.97,\n        \"MemMB\": 344.8,\n        \"MainWindowTitle\": \"\"\n      }\n    ],\n    \"count\": 8,\n    \"total\": 8,\n    \"status\": \"ok\",\n    \"type\": \"processes\",\n    \"name\": \"processes\",\n    \"title\": \"Running Processes\",\n    \"message\": \"Found 8 running process(es).\",\n    \"data\": {\n      \"count\": 8\n    }\n  }\n}"
+      }
+    ],
+    "structuredContent": {
+      "ok": true,
+      "data": {
+        "processes": [
+          {
+            "Id": 32496,
+            "ProcessName": "pwsh",
+            "CpuS": 94.88,
+            "MemMB": 3235.7,
+            "MainWindowTitle": ""
+          },
+          {
+            "Id": 7272,
+            "ProcessName": "Code",
+            "CpuS": 3633.44,
+            "MemMB": 1029,
+            "MainWindowTitle": ""
+          },
+          {
+            "Id": 2064,
+            "ProcessName": "Code",
+            "CpuS": 699,
+            "MemMB": 445.6,
+            "MainWindowTitle": ""
+          },
+          {
+            "Id": 5196,
+            "ProcessName": "Code",
+            "CpuS": 2583.33,
+            "MemMB": 401.2,
+            "MainWindowTitle": ""
+          },
+          {
+            "Id": 3632,
+            "ProcessName": "Memory Compression",
+            "CpuS": 0,
+            "MemMB": 361.4,
+            "MainWindowTitle": ""
+          },
+          {
+            "Id": 9600,
+            "ProcessName": "Code",
+            "CpuS": 674.41,
+            "MemMB": 357.9,
+            "MainWindowTitle": ""
+          },
+          {
+            "Id": 7364,
+            "ProcessName": "Code",
+            "CpuS": 2634.64,
+            "MemMB": 357.2,
+            "MainWindowTitle": ""
+          },
+          {
+            "Id": 24856,
+            "ProcessName": "Code",
+            "CpuS": 1652.97,
+            "MemMB": 344.8,
+            "MainWindowTitle": ""
+          }
+        ],
+        "count": 8,
+        "total": 8,
+        "status": "ok",
+        "type": "processes",
+        "name": "processes",
+        "title": "Running Processes",
+        "message": "Found 8 running process(es).",
+        "data": {
+          "count": 8
+        }
+      }
+    },
+    "isError": false
+  }
+}

@@ -1,15 +1,16 @@
 {
-  "timestamp": "2026-05-05T11:40:33.526Z",
-  "runStamp": "2026-05-05_073919",
+  "timestamp": "2026-05-11T04:59:16.724Z",
+  "runStamp": "2026-05-11_005811",
   "includeDangerous": false,
   "testFile": "group-i-window-intel/test.js",
   "id": "group-i-window-intel",
   "status": "pass",
-  "durationMs": 14804,
+  "durationMs": 15804,
   "notes": "Window intelligence tools returned expected structures and selector parity checks passed",
   "details": {
-    "visibleWindows": 7,
-    "focusedTitle": "Web Scraper MCP - Tool Reference - Google Chrome",
-    "hierarchyNodes": 13
+    "visibleWindows": 5,
+    "focusedTitle": "ChatGPT - Google Chrome",
+    "focusedAfterFocusTitle": "ChatGPT - Google Chrome",
+    "hierarchyNodes": 10
   }
 }

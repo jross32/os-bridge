@@ -1,0 +1,23 @@
+{
+  "id": "agent-mode-watch",
+  "executionProfile": {
+    "mode": "watch",
+    "announceActions": true,
+    "preActionDelayMs": 1000,
+    "notificationTitle": "os-bridge agent mode",
+    "autoApproveThrough": "medium"
+  },
+  "runner": {
+    "normalizeControlState": true,
+    "requestControlBeforeRun": true,
+    "releaseControlAfterRun": true,
+    "captureAfterEachStep": true,
+    "enableScreenshotDiff": true,
+    "riskPolicy": {
+      "autoApproveLow": true,
+      "autoApproveMedium": true,
+      "requireApprovalForHigh": true,
+      "requireApprovalForCritical": true
+    }
+  }
+}

@@ -33,12 +33,16 @@ module.exports = {
     assert(img && img.data, 'Should return image data');
     assert(img.mimeType === 'image/png', 'mimeType should be image/png');
     assert(typeof img.data === 'string' && img.data.length > 500, 'Image data should be substantial');
+    assert(imgResp.json && typeof imgResp.json.captureMethod === 'string', 'Expected captureMethod metadata');
+    assert(imgResp.json && typeof imgResp.json.focusVerified === 'boolean', 'Expected focusVerified metadata');
 
     return {
       notes: 'screenshot_window: fallback + real window capture both pass',
       details: {
         windowCaptured: win.title.slice(0, 40),
         imageSizeKB: Math.round(img.data.length * 0.75 / 1024),
+        captureMethod: imgResp.json.captureMethod,
+        focusVerified: imgResp.json.focusVerified,
       },
     };
   },

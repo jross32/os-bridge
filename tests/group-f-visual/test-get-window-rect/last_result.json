@@ -1,19 +1,19 @@
 {
-  "timestamp": "2026-05-05T11:39:51.834Z",
-  "runStamp": "2026-05-05_073919",
+  "timestamp": "2026-05-11T04:58:36.098Z",
+  "runStamp": "2026-05-11_005811",
   "includeDangerous": false,
   "testFile": "group-f-visual/test-get-window-rect/test.js",
   "id": "group-f-visual/test-get-window-rect",
   "status": "pass",
-  "durationMs": 6870,
+  "durationMs": 5594,
   "notes": "get_window_rect: error case and shape validation passed",
   "details": {
-    "windowTested": "Web Scraper MCP - Tool Reference - Googl",
+    "windowTested": "ChatGPT - Google Chrome",
     "rect": {
-      "x": -6,
-      "y": 162,
-      "w": 951,
-      "h": 660
+      "x": 9,
+      "y": 9,
+      "w": 1051,
+      "h": 798
     }
   }
 }

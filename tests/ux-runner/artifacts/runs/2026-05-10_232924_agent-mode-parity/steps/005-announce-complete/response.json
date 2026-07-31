@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "text": "{\n  \"ok\": true,\n  \"data\": \"Notification sent\"\n}",
+  "json": "Notification sent",
+  "structured": {
+    "ok": true,
+    "data": "Notification sent"
+  },
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"ok\": true,\n  \"data\": \"Notification sent\"\n}"
+      }
+    ],
+    "structuredContent": {
+      "ok": true,
+      "data": "Notification sent"
+    },
+    "isError": false
+  }
+}

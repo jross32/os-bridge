@@ -1,76 +1,49 @@
 # os-bridge
 
-BETA v0.0.0
+Windows-only MCP server for desktop automation, shell execution, screenshots, clipboard access, process inspection, and file operations.
 
-OS-level MCP server for Windows automation and system control over stdio JSON-RPC.
+## What It Is
 
-## What It Does
+- A product MCP server for operating the local Windows environment
+- Useful for AI-assisted desktop workflows that need real OS access instead of repository-only tooling
+- Designed to work over stdio MCP, with an optional HTTP helper server for health/docs/tool inspection
 
-- Exposes local OS automation tools via MCP
-- Supports desktop control primitives (mouse, keyboard, windows)
-- Includes shell session tools for persistent command execution
-- Provides visual helpers including window bounds and screenshots
+## Safety Model
 
-## Current Versioning Policy
+- Some tools are observational and safe by default
+- Some tools are visibly interactive and can move the mouse, type, focus windows, or launch apps
+- Dangerous tests are opt-in because they can affect the live desktop state
 
-This repository uses incremental beta versioning:
-
-- Start at `0.0.0`
-- Every new commit should include:
-  - Commit notes (what changed and why)
-  - A version bump in `package.json`
-
-Suggested bump flow:
-
-- Patch-level update: `0.0.1`, `0.0.2`, ...
-- Minor beta milestone: `0.1.0`, `0.2.0`, ...
-- Pre-1.0 stabilization: `0.x.y`
-
-## Requirements
-
-- Node.js 18+
-- Windows PowerShell available on PATH
-
-## Install
+## Quick Start
 
 ```powershell
 npm install
-```
-
-## Run
-
-```powershell
 npm start
 ```
 
-## Test
+Optional HTTP helper server:
 
 ```powershell
+npm run http
+```
+
+## Testing
+
+```powershell
+npm run check
 npm test
+npm run test:dangerous
+npm run ux:smoke
+npm run ux:visible
+npm run ux:agent-mode
 ```
 
-## Verify Before Commit
+## Runtime Discovery
 
-```powershell
-npm run verify
-```
+- Use `tools/list` and `prompts/list` for the live MCP surface
+- Use the HTTP helper endpoints `/health`, `/docs`, and `/tools` when running `npm run http`
 
-Use `RELEASE_CHECKLIST.md` for the full release flow.
+## More Detail
 
-## Git Setup Info
-
-If needed, configure git identity before committing:
-
-```powershell
-git config user.name "jross32"
-git config user.email "justinwross32@gmail.com"
-git config commit.template .gitmessage.txt
-```
-
-This repository includes `.gitmessage.txt` to standardize commit notes and version bump entries.
-
-## Notes
-
-- This server is designed to be client-agnostic (works with Claude, Copilot, Codex, or other MCP clients).
-- Keep tool behavior generic and avoid app-specific assumptions.
-- For adding/updating tools, follow `MCP_TOOL_STANDARDS.md`.
+- Operator guide: [DOCS.md](DOCS.md)
+- Workspace context: [../README.md](../README.md)

@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-05-11T03:28:02.398Z",
+  "runStamp": "2026-05-10_232741",
+  "includeDangerous": true,
+  "testFile": "group-d-dangerous/test-run-command/test.js",
+  "id": "group-d-dangerous/test-run-command",
+  "status": "pass",
+  "durationMs": 2006,
+  "notes": "run_command envelope verified with safe command",
+  "details": null
+}

@@ -69,7 +69,45 @@ module.exports = {
     assert(recurse.json.steps[0].error && recurse.json.steps[0].error.code, 'recursion guard should include structured step error');
     notes.push('workflow recursion guard passed');
 
-    // 5) Prompt availability check for continuous workflow prompt.
+    // 5) Watch mode should pause before a high-risk step.
+    const setWatch = await client.callTool('set_execution_profile', {
+      mode: 'watch',
+      autoApproveThrough: 'medium',
+    });
+    assert(setWatch.ok, `Expected watch execution profile setup success: ${setWatch.error}`);
+
+    const gated = await client.callTool('workflow_runbook_execute', {
+      steps: [
+        { tool: 'get_system_info', risk: 'high' },
+      ],
+      stopOnFail: true,
+    }, 60000);
+
+    assert(gated.ok, `watch-mode gated workflow failed unexpectedly: ${gated.error}`);
+    assert(gated.json.pausedForApproval === true, 'watch-mode run should pause for approval');
+    assert(gated.json.summary.executedSteps === 0, 'watch-mode gated run should not execute blocked step');
+    assert(gated.json.summary.waitingApproval === 1, 'watch-mode gated run should report one waiting approval step');
+    assert(gated.json.approvalRequest && gated.json.approvalRequest.step === 1, 'watch-mode gated run should return approval request metadata');
+    notes.push('workflow watch-mode gating passed');
+
+    // 6) Watch mode override should allow the same high-risk-tagged step to proceed.
+    const approved = await client.callTool('workflow_runbook_execute', {
+      steps: [
+        { tool: 'get_system_info', risk: 'high' },
+      ],
+      autoApproveThrough: 'high',
+      stopOnFail: true,
+    }, 60000);
+
+    assert(approved.ok, `watch-mode override workflow failed unexpectedly: ${approved.error}`);
+    assert(approved.json.pausedForApproval === false, 'watch-mode override should not pause');
+    assert(approved.json.summary.succeeded === 1, 'watch-mode override should execute the approved step');
+    notes.push('workflow watch-mode override passed');
+
+    const setQuiet = await client.callTool('set_execution_profile', { mode: 'quiet' });
+    assert(setQuiet.ok, `Expected quiet execution profile reset success: ${setQuiet.error}`);
+
+    // 7) Prompt availability check for continuous workflow prompt.
     const prompts = await client.request('prompts/list', {});
     const promptNames = Array.isArray(prompts.prompts) ? prompts.prompts.map((p) => p.name) : [];
     assert(promptNames.includes('continuous_mcp_improvement'), 'continuous_mcp_improvement prompt should be listed');

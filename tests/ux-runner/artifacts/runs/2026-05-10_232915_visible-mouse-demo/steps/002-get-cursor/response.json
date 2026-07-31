@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"x\": 995,\n    \"y\": 267\n  }\n}",
+  "json": {
+    "x": 995,
+    "y": 267
+  },
+  "structured": {
+    "ok": true,
+    "data": {
+      "x": 995,
+      "y": 267
+    }
+  },
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"x\": 995,\n    \"y\": 267\n  }\n}"
+      }
+    ],
+    "structuredContent": {
+      "ok": true,
+      "data": {
+        "x": 995,
+        "y": 267
+      }
+    },
+    "isError": false
+  }
+}

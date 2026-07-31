@@ -56,6 +56,55 @@ function shellOpen(args) {
   return { sessionId, shell, cwd, pid: proc.pid };
 }
 
+function execShellSessionCommand(session, command, timeoutMs) {
+  return new Promise((resolve) => {
+    const shell = session.shell === 'cmd.exe' ? 'cmd.exe' : 'powershell.exe';
+    const execArgs = shell === 'cmd.exe'
+      ? ['/d', '/s', '/c', command]
+      : ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command];
+    const child = spawn(shell, execArgs, {
+      cwd: session.cwd,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+
+    let stdout = '';
+    let stderr = '';
+    let finished = false;
+
+    const timer = setTimeout(() => {
+      if (!finished) {
+        try { child.kill(); } catch {}
+      }
+    }, timeoutMs);
+
+    child.stdout.on('data', (chunk) => { stdout += chunk.toString('utf8'); });
+    child.stderr.on('data', (chunk) => { stderr += chunk.toString('utf8'); });
+
+    child.on('close', (exitCode) => {
+      finished = true;
+      clearTimeout(timer);
+      resolve({
+        stdout: stdout.trimEnd(),
+        stderr: stderr.trimEnd(),
+        exitCode: exitCode == null ? 1 : exitCode,
+        timedOut: false,
+      });
+    });
+
+    child.on('error', (error) => {
+      finished = true;
+      clearTimeout(timer);
+      resolve({
+        stdout: stdout.trimEnd(),
+        stderr: `${stderr}\n${error.message}`.trim(),
+        exitCode: 1,
+        timedOut: false,
+      });
+    });
+  });
+}
+
 async function shellSend(args) {
   if (!args.sessionId) throw new Error('sessionId required');
   if (!args.command)   throw new Error('command required');
@@ -73,7 +122,7 @@ async function shellSend(args) {
   // For PowerShell: append sentinel echo after command. For cmd: use & echo.
   const marker = session.shell === 'cmd'
     ? `${args.command}\r\necho ${sentinel}\r\n`
-    : `${args.command}\nWrite-Output '${sentinel}'\n`;
+    : `${args.command}\r\nWrite-Output '${sentinel}'\r\n`;
 
   session.proc.stdin.write(marker);
 
@@ -88,6 +137,22 @@ async function shellSend(args) {
     }
     setTimeout(check, 100);
   });
+
+  if (!session.outputBuf.includes(sentinel) && !session.closed) {
+    session.outputBuf = '';
+    session.errorBuf = '';
+    const fallback = await execShellSessionCommand(session, args.command, timeoutMs);
+    session.outputBuf = fallback.stdout;
+    session.errorBuf = fallback.stderr;
+    session.exitCode = fallback.exitCode;
+    return {
+      stdout: fallback.stdout,
+      stderr: fallback.stderr,
+      closed: session.closed,
+      exitCode: fallback.exitCode,
+      timedOut: fallback.timedOut,
+    };
+  }
 
   // Strip sentinel (and the PS prompt line that follows) from output
   let stdout = session.outputBuf;
@@ -154,6 +219,7 @@ const executionProfile = {
   announceActions: false,
   preActionDelayMs: 700,
   notificationTitle: 'os-bridge',
+  autoApproveThrough: 'medium',
 };
 
 function checkInputAllowed() {
@@ -196,7 +262,7 @@ function actionPreview(toolName, args = {}) {
 }
 
 async function maybeAnnounceAction(toolName, args) {
-  if (executionProfile.mode !== 'visible' || !executionProfile.announceActions) return;
+  if (executionProfile.mode === 'quiet' || !executionProfile.announceActions) return;
 
   const message = actionPreview(toolName, args);
   try {
@@ -471,6 +537,14 @@ using System.Runtime.InteropServices;
 public class WinFocus {
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int n);
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern IntPtr SetActiveWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern IntPtr SetFocus(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint p);
+    [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+    [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
 }
 '@ -ErrorAction SilentlyContinue`;
 
@@ -990,6 +1064,65 @@ if (-not $proc) {
 }`;
 }
 
+function buildWindowForegroundPs(targetExpr = '$proc.MainWindowHandle', attempts = 6, settleMs = 120) {
+  return `
+$targetHwnd = ${targetExpr}
+$focusVerified = $false
+$focusAttempts = 0
+while (-not $focusVerified -and $focusAttempts -lt ${attempts}) {
+  $focusAttempts++
+  if ([WinFocus]::IsIconic($targetHwnd)) {
+    [WinFocus]::ShowWindow($targetHwnd, 9) | Out-Null
+  }
+
+  $fgHwnd = [WinFocus]::GetForegroundWindow()
+  $currentThread = [WinFocus]::GetCurrentThreadId()
+  $fgPid = [uint32]0
+  $targetPid = [uint32]0
+  $fgThread = if ($fgHwnd -ne [IntPtr]::Zero) { [WinFocus]::GetWindowThreadProcessId($fgHwnd, [ref]$fgPid) } else { 0 }
+  $targetThread = [WinFocus]::GetWindowThreadProcessId($targetHwnd, [ref]$targetPid)
+  $attachedFg = $false
+  $attachedTarget = $false
+
+  try {
+    if ($fgThread -ne 0 -and $fgThread -ne $currentThread) {
+      $attachedFg = [WinFocus]::AttachThreadInput($currentThread, $fgThread, $true)
+    }
+    if ($targetThread -ne 0 -and $targetThread -ne $currentThread -and $targetThread -ne $fgThread) {
+      $attachedTarget = [WinFocus]::AttachThreadInput($currentThread, $targetThread, $true)
+    }
+
+    [WinFocus]::BringWindowToTop($targetHwnd) | Out-Null
+    [WinFocus]::ShowWindow($targetHwnd, 9) | Out-Null
+    [WinFocus]::SetActiveWindow($targetHwnd) | Out-Null
+    [WinFocus]::SetFocus($targetHwnd) | Out-Null
+    [WinFocus]::SetForegroundWindow($targetHwnd) | Out-Null
+    Start-Sleep -Milliseconds ${settleMs}
+    $focusVerified = ([WinFocus]::GetForegroundWindow() -eq $targetHwnd)
+  } finally {
+    if ($attachedTarget) {
+      [WinFocus]::AttachThreadInput($currentThread, $targetThread, $false) | Out-Null
+    }
+    if ($attachedFg) {
+      [WinFocus]::AttachThreadInput($currentThread, $fgThread, $false) | Out-Null
+    }
+  }
+
+  if (-not $focusVerified) {
+    try {
+      $ws = New-Object -ComObject WScript.Shell
+      $null = $ws.AppActivate([int]$proc.Id)
+      Start-Sleep -Milliseconds ${settleMs}
+      $focusVerified = ([WinFocus]::GetForegroundWindow() -eq $targetHwnd)
+    } catch {}
+  }
+
+  if (-not $focusVerified) {
+    Start-Sleep -Milliseconds ${settleMs}
+  }
+}`;
+}
+
 async function focusWindow(args) {
   checkInputAllowed();
   const selector = normalizeWindowSelectorArgs(args);
@@ -997,10 +1130,11 @@ async function focusWindow(args) {
   const script = `
 ${PS_WINFOCUS}
 ${buildWindowResolvePs(selector)}
-[WinFocus]::ShowWindow($proc.MainWindowHandle, 9) | Out-Null
-Start-Sleep -Milliseconds 100
-[WinFocus]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null
-"focused[$matchedBy]: $($proc.MainWindowTitle)"`;
+${buildWindowForegroundPs('$proc.MainWindowHandle', 6, 120)}
+if (-not $focusVerified) {
+  throw "Unable to verify foreground focus for: $($proc.MainWindowTitle)"
+}
+"focused[$matchedBy]: $($proc.MainWindowTitle) (verified=$focusVerified attempts=$focusAttempts)"`;
   return psRun(script);
 }
 
@@ -1267,6 +1401,7 @@ async function screenshotWindow(args) {
   const hwnd = args.hwnd ? String(args.hwnd).replace(/'/g, "''") : '';
   const titleCond = title ? `$proc = Get-Process | Where-Object { $_.MainWindowHandle -ne [IntPtr]::Zero -and $_.MainWindowTitle -like '*${title}*' } | Select-Object -First 1` : '';
   const script = `
+${PS_WINFOCUS}
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -TypeDefinition @'
@@ -1276,8 +1411,7 @@ public class WinCapture {
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT { public int Left, Top, Right, Bottom; }
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
-    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
-    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
+    [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, int flags);
 }
 '@ -ErrorAction SilentlyContinue
 $proc = $null
@@ -1307,32 +1441,66 @@ if (-not $proc) {
   $ms = New-Object System.IO.MemoryStream
   $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
   $g.Dispose(); $bmp.Dispose()
-  Write-Output ("FALLBACK:" + [Convert]::ToBase64String($ms.ToArray()))
+  @{
+    data = [Convert]::ToBase64String($ms.ToArray())
+    warning = 'No window matched selector; captured full primary screen instead'
+    matchedBy = $null
+    title = $null
+    pid = $null
+    focusVerified = $false
+    focusAttempts = 0
+    captureMethod = 'full-screen-fallback'
+  } | ConvertTo-Json -Compress
 } else {
-  [WinCapture]::ShowWindow($proc.MainWindowHandle, 9) | Out-Null
-  [WinCapture]::SetForegroundWindow($proc.MainWindowHandle) | Out-Null
-  Start-Sleep -Milliseconds 300
+  ${buildWindowForegroundPs('$proc.MainWindowHandle', 4, 100)}
   $rect = New-Object WinCapture+RECT
   [WinCapture]::GetWindowRect($proc.MainWindowHandle, [ref]$rect) | Out-Null
   $w = $rect.Right - $rect.Left; $h = $rect.Bottom - $rect.Top
   if ($w -le 0 -or $h -le 0) { throw "Window has zero size: $($proc.MainWindowTitle)" }
   $bmp = New-Object System.Drawing.Bitmap($w, $h)
   $g   = [System.Drawing.Graphics]::FromImage($bmp)
-  $g.CopyFromScreen($rect.Left, $rect.Top, 0, 0, [System.Drawing.Size]::new($w, $h))
+  $captureMethod = 'print-window'
+  $hdc = $g.GetHdc()
+  try {
+    $printed = [WinCapture]::PrintWindow($proc.MainWindowHandle, $hdc, 2)
+  } finally {
+    $g.ReleaseHdc($hdc)
+  }
+  if (-not $printed) {
+    $captureMethod = 'screen-copy'
+    $g.CopyFromScreen($rect.Left, $rect.Top, 0, 0, [System.Drawing.Size]::new($w, $h))
+  }
   $ms = New-Object System.IO.MemoryStream
   $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
   $g.Dispose(); $bmp.Dispose()
-  Write-Output ([Convert]::ToBase64String($ms.ToArray()))
+  @{
+    data = [Convert]::ToBase64String($ms.ToArray())
+    warning = if ($focusVerified) { $null } else { "Target window could not be verified as foreground before capture" }
+    matchedBy = $matchedBy
+    title = $proc.MainWindowTitle
+    pid = [int]$proc.Id
+    focusVerified = [bool]$focusVerified
+    focusAttempts = [int]$focusAttempts
+    captureMethod = $captureMethod
+  } | ConvertTo-Json -Compress
 }`;
   const raw = psRun(script, 25000);
-  let b64 = raw, warning;
-  if (raw.startsWith('FALLBACK:')) {
-    b64 = raw.slice('FALLBACK:'.length);
-    const selector = args.pid != null ? `pid=${args.pid}` : (args.hwnd ? `hwnd=${args.hwnd}` : `title='${args.title}'`);
-    warning = `No window matched ${selector} — captured full primary screen instead`;
+  const parsed = tryJson(raw.trim());
+  if (!parsed || typeof parsed !== 'object' || !parsed.data) {
+    throw new Error('screenshot_window returned an invalid payload');
   }
-  const result = { mimeType: 'image/png', data: b64.trim(), _isImage: true };
-  if (warning) result.warning = warning;
+  const result = {
+    mimeType: 'image/png',
+    data: String(parsed.data).trim(),
+    _isImage: true,
+    warning: parsed.warning || null,
+    matchedBy: parsed.matchedBy || null,
+    title: parsed.title || null,
+    pid: Number.isFinite(parsed.pid) ? parsed.pid : null,
+    focusVerified: Boolean(parsed.focusVerified),
+    focusAttempts: Number.isFinite(parsed.focusAttempts) ? parsed.focusAttempts : null,
+    captureMethod: parsed.captureMethod || null,
+  };
   return result;
 }
 
@@ -1753,6 +1921,83 @@ function summarizeWorkflowResultData(data) {
   };
 }
 
+const WORKFLOW_RISK_LEVELS = ['low', 'medium', 'high', 'critical'];
+
+function normalizeWorkflowRiskLevel(value, fallback = 'low') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return WORKFLOW_RISK_LEVELS.includes(normalized) ? normalized : fallback;
+}
+
+function workflowRiskRank(level) {
+  return WORKFLOW_RISK_LEVELS.indexOf(normalizeWorkflowRiskLevel(level));
+}
+
+function classifyWorkflowToolRisk(toolName) {
+  const critical = new Set([
+    'run_command',
+    'shell_open',
+    'shell_send',
+    'kill_process',
+    'delete_file',
+    'manage_service',
+  ]);
+  const high = new Set([
+    'click_mouse',
+    'drag_mouse',
+    'type_text',
+    'press_key',
+    'focus_window',
+    'close_window',
+    'open_url',
+    'write_file',
+  ]);
+  const medium = new Set([
+    'move_mouse',
+    'scroll',
+    'write_clipboard',
+    'move_window',
+    'resize_window',
+    'shell_close',
+  ]);
+
+  if (critical.has(toolName)) return 'critical';
+  if (high.has(toolName)) return 'high';
+  if (medium.has(toolName)) return 'medium';
+  return 'low';
+}
+
+function resolveWorkflowApprovalPolicy(args) {
+  const watchMode = args.watchMode === true || executionProfile.mode === 'watch';
+  const defaultThreshold = executionProfile.autoApproveThrough || 'medium';
+  const autoApproveThrough = normalizeWorkflowRiskLevel(
+    args.autoApproveThrough,
+    normalizeWorkflowRiskLevel(defaultThreshold, 'medium')
+  );
+
+  return {
+    watchMode,
+    autoApproveThrough,
+  };
+}
+
+function buildWorkflowApprovalRequest({ stepNo, tool, stepRisk, step, policy }) {
+  const reason = step.requiresConfirmation === true
+    ? 'step marked requiresConfirmation=true'
+    : `${stepRisk}-risk step exceeds auto-approval threshold (${policy.autoApproveThrough})`;
+  const approvalMessage = step.approvalMessage
+    || `Approval required before step ${stepNo} (${tool}). Reason: ${reason}.`;
+
+  return {
+    step: stepNo,
+    tool,
+    risk: stepRisk,
+    reason,
+    message: approvalMessage,
+    watchMode: policy.watchMode,
+    autoApproveThrough: policy.autoApproveThrough,
+  };
+}
+
 async function workflowRunbookExecute(args) {
   const steps = Array.isArray(args.steps) ? args.steps : [];
   if (steps.length === 0) throw new Error('steps must be a non-empty array');
@@ -1766,10 +2011,13 @@ async function workflowRunbookExecute(args) {
   const maxTotalMs = Math.min(parseInt(args.maxTotalMs) || 120000, 600000);
   const startedAtMs = Date.now();
   const runId = crypto.randomUUID();
+  const approvalPolicy = resolveWorkflowApprovalPolicy(args);
 
   const results = [];
   let aborted = false;
   let abortReason = null;
+  let pausedForApproval = false;
+  let approvalRequest = null;
 
   for (let idx = 0; idx < steps.length; idx++) {
     const step = steps[idx] || {};
@@ -1779,6 +2027,7 @@ async function workflowRunbookExecute(args) {
     const retries = Math.max(0, Math.min(5, parseInt(step.retries) || 0));
     const continueOnError = step.continueOnError === true;
     const stepTimeoutMs = Math.max(250, Math.min(120000, parseInt(step.timeoutMs) || 0));
+    const stepRisk = normalizeWorkflowRiskLevel(step.risk, classifyWorkflowToolRisk(tool));
 
     if (Date.now() - startedAtMs > maxTotalMs) {
       aborted = true;
@@ -1816,6 +2065,35 @@ async function workflowRunbookExecute(args) {
         break;
       }
       continue;
+    }
+
+    if (
+      step.requiresConfirmation === true
+      || (
+        approvalPolicy.watchMode
+        && workflowRiskRank(stepRisk) > workflowRiskRank(approvalPolicy.autoApproveThrough)
+      )
+    ) {
+      approvalRequest = buildWorkflowApprovalRequest({
+        stepNo,
+        tool,
+        stepRisk,
+        step,
+        policy: approvalPolicy,
+      });
+      pausedForApproval = true;
+      results.push({
+        step: stepNo,
+        tool,
+        status: 'waiting_approval',
+        attempts: 0,
+        continueOnError,
+        note: step.note || null,
+        risk: stepRisk,
+        requiresConfirmation: true,
+        approvalMessage: approvalRequest.message,
+      });
+      break;
     }
 
     let attempt = 0;
@@ -1861,6 +2139,7 @@ async function workflowRunbookExecute(args) {
         attempts: attempt,
         continueOnError,
         note: step.note || null,
+        risk: stepRisk,
         result: summarizeWorkflowResultData(lastData),
       });
       continue;
@@ -1873,6 +2152,7 @@ async function workflowRunbookExecute(args) {
       attempts: attempt,
       continueOnError,
       note: step.note || null,
+      risk: stepRisk,
       error: {
         code: lastErr.code,
         category: lastErr.category,
@@ -1893,7 +2173,8 @@ async function workflowRunbookExecute(args) {
   const finishedAtMs = Date.now();
   const succeeded = results.filter((r) => r.status === 'succeeded').length;
   const failed = results.filter((r) => r.status === 'failed').length;
-  const executedSteps = results.length;
+  const waitingApproval = results.filter((r) => r.status === 'waiting_approval').length;
+  const executedSteps = results.filter((r) => r.status !== 'waiting_approval').length;
 
   return {
     runId,
@@ -1903,14 +2184,19 @@ async function workflowRunbookExecute(args) {
     stopOnFail,
     maxSteps,
     maxTotalMs,
+    watchMode: approvalPolicy.watchMode,
+    autoApproveThrough: approvalPolicy.autoApproveThrough,
     aborted,
     abortReason,
-    completedAllSteps: !aborted && executedSteps === steps.length,
+    pausedForApproval,
+    approvalRequest,
+    completedAllSteps: !aborted && !pausedForApproval && executedSteps === steps.length,
     summary: {
       totalSteps: steps.length,
       executedSteps,
       succeeded,
       failed,
+      waitingApproval,
     },
     steps: results,
   };
@@ -1924,8 +2210,8 @@ function getExecutionProfile() {
 }
 
 function setExecutionProfile(args) {
-  if (args.mode && !['quiet', 'visible'].includes(args.mode)) {
-    throw new Error('mode must be "quiet" or "visible"');
+  if (args.mode && !['quiet', 'visible', 'watch'].includes(args.mode)) {
+    throw new Error('mode must be "quiet", "visible", or "watch"');
   }
 
   if (args.mode) executionProfile.mode = args.mode;
@@ -1944,8 +2230,16 @@ function setExecutionProfile(args) {
     executionProfile.notificationTitle = title || 'os-bridge';
   }
 
+  if (args.autoApproveThrough != null) {
+    executionProfile.autoApproveThrough = normalizeWorkflowRiskLevel(args.autoApproveThrough, 'medium');
+  }
+
   if (executionProfile.mode === 'quiet') {
     executionProfile.announceActions = false;
+  }
+
+  if (executionProfile.mode === 'watch') {
+    executionProfile.announceActions = true;
   }
 
   return {
@@ -2304,7 +2598,14 @@ async function windowScreenshotGrid(args) {
   for (const t of titles.slice(0, 10)) {
     try {
       const s = await screenshotWindow({ title: t });
-      results.push({ title: t, captured: true, mimeType: s.mimeType });
+      results.push({
+        title: t,
+        captured: true,
+        mimeType: s.mimeType,
+        matchedBy: s.matchedBy || null,
+        focusVerified: Boolean(s.focusVerified),
+        captureMethod: s.captureMethod || null,
+      });
     } catch (e) {
       results.push({ title: t, captured: false, error: e.message });
     }
@@ -2692,7 +2993,7 @@ const TOOLS = [
   },
   {
     name: 'workflow_runbook_execute',
-    description: 'Execute a multi-step MCP runbook with retries, per-step timeout, and stop/continue policies.',
+    description: 'Execute a multi-step MCP runbook with retries, per-step timeout, stop/continue policies, and optional watch-mode approval gating.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2708,6 +3009,9 @@ const TOOLS = [
               timeoutMs: { type: 'number', description: 'Per-step timeout in ms (default 0 = no local timeout)', minimum: 0, maximum: 120000 },
               continueOnError: { type: 'boolean', description: 'Continue runbook if this step fails (default false)' },
               note: { type: 'string', description: 'Optional operator note for this step' },
+              risk: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Optional explicit risk level override for approval gating' },
+              requiresConfirmation: { type: 'boolean', description: 'If true, pause the workflow before this step and return an approval request instead of executing it' },
+              approvalMessage: { type: 'string', description: 'Optional custom message to include in the approval request' },
             },
             required: ['tool'],
             additionalProperties: false,
@@ -2716,6 +3020,8 @@ const TOOLS = [
         stopOnFail: { type: 'boolean', description: 'Stop workflow on first failed step unless step has continueOnError=true (default true)' },
         maxSteps: { type: 'number', description: 'Maximum allowed steps for this workflow run (default 50, max 100)', minimum: 1, maximum: 100 },
         maxTotalMs: { type: 'number', description: 'Maximum total workflow duration in ms (default 120000, max 600000)', minimum: 1000, maximum: 600000 },
+        watchMode: { type: 'boolean', description: 'If true, enable approval gating for steps above the auto-approval threshold' },
+        autoApproveThrough: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Highest risk level that may proceed automatically in watch mode (default: execution profile threshold)' },
       },
       required: ['steps'],
       additionalProperties: false,
@@ -2750,19 +3056,20 @@ const TOOLS = [
   },
   {
     name: 'get_execution_profile',
-    description: 'Get current execution profile. quiet = no pre-action announcements, visible = announce before risky actions.',
+    description: 'Get current execution profile. quiet = silent, visible = announce actions, watch = announce actions and pause workflows for approval on high-risk steps.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'set_execution_profile',
-    description: 'Set execution profile for interactive tools. Use mode="visible" and announceActions=true to show upcoming actions before click/type/etc.',
+    description: 'Set execution profile for interactive tools. Use mode="visible" to announce actions, or mode="watch" to announce actions and make workflow_runbook_execute pause for approval on higher-risk steps.',
     inputSchema: {
       type: 'object',
       properties: {
-        mode: { type: 'string', enum: ['quiet', 'visible'], description: 'quiet (default) or visible' },
+        mode: { type: 'string', enum: ['quiet', 'visible', 'watch'], description: 'quiet (default), visible, or watch' },
         announceActions: { type: 'boolean', description: 'Whether to announce actions via notifications in visible mode' },
         preActionDelayMs: { type: 'number', description: 'Delay before action in visible mode (0..5000, default 700)' },
         notificationTitle: { type: 'string', description: 'Toast title for announcements' },
+        autoApproveThrough: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Workflow watch-mode threshold: steps above this risk level will pause for approval' },
       },
     },
   },
@@ -3880,6 +4187,11 @@ function makeImageResult(data) {
         fallbackUsed: Boolean(data.warning),
         warning: data.warning || null,
         matchedBy: data.matchedBy || null,
+        title: data.title || null,
+        pid: Number.isFinite(data.pid) ? data.pid : null,
+        focusVerified: typeof data.focusVerified === 'boolean' ? data.focusVerified : null,
+        focusAttempts: Number.isFinite(data.focusAttempts) ? data.focusAttempts : null,
+        captureMethod: data.captureMethod || null,
       },
     },
     isError: false,

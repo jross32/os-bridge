@@ -1,0 +1,12 @@
+{
+  "index": 0,
+  "id": "announce-start",
+  "tool": "send_notification",
+  "args": {
+    "title": "os-bridge",
+    "message": "Agent-mode parity scenario is starting."
+  },
+  "risk": "low",
+  "gateReason": "No explicit confirmation required",
+  "startedAt": "2026-05-11T03:29:24.876Z"
+}

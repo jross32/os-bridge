@@ -18,8 +18,17 @@ module.exports = {
 
     const getProfile = await client.callTool('get_execution_profile');
     assert(getProfile.ok, `Expected get_execution_profile success: ${getProfile.error}`);
-    assertHasKeys(getProfile.json, ['mode', 'announceActions', 'preActionDelayMs'], 'executionProfile');
+    assertHasKeys(getProfile.json, ['mode', 'announceActions', 'preActionDelayMs', 'autoApproveThrough'], 'executionProfile');
     assert(getProfile.json.mode === 'visible', 'Expected visible mode after set');
+
+    const setWatch = await client.callTool('set_execution_profile', {
+      mode: 'watch',
+      autoApproveThrough: 'high',
+    });
+    assert(setWatch.ok, `Expected set_execution_profile(watch) success: ${setWatch.error}`);
+    assert(setWatch.json.profile.mode === 'watch', 'Expected mode watch');
+    assert(setWatch.json.profile.announceActions === true, 'Expected announceActions true in watch mode');
+    assert(setWatch.json.profile.autoApproveThrough === 'high', 'Expected autoApproveThrough high in watch mode');
 
     const setQuiet = await client.callTool('set_execution_profile', { mode: 'quiet' });
     assert(setQuiet.ok, `Expected set_execution_profile(quiet) success: ${setQuiet.error}`);

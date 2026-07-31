@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-05-05T11:10:24.431Z",
-  "runStamp": "2026-05-05_070830",
+  "timestamp": "2026-05-11T04:59:50.956Z",
+  "runStamp": "2026-05-11_005811",
   "includeDangerous": false,
   "testFile": "integration/test-clipboard-roundtrip/test.js",
   "id": "integration/test-clipboard-roundtrip",
   "status": "pass",
-  "durationMs": 2271,
+  "durationMs": 2595,
   "notes": "Clipboard roundtrip succeeded",
   "details": {
     "tokenLength": 33

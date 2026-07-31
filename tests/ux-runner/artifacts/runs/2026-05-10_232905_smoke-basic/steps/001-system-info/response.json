@@ -1,0 +1,124 @@
+{
+  "ok": true,
+  "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"username\": \"justi\",\n    \"cpu\": {\n      \"logicalProcessors\": 8,\n      \"name\": \"AMD Ryzen 7 3750H with Radeon Vega Mobile Gfx  \",\n      \"cores\": 4,\n      \"loadPercent\": 67\n    },\n    \"osVersion\": \"10.0.26100\",\n    \"disks\": [\n      {\n        \"Name\": \"C\",\n        \"usedGB\": 469.25,\n        \"freeGB\": 6.59\n      }\n    ],\n    \"os\": \"Microsoft Windows 11 Home\",\n    \"hostname\": \"LAPTOP-GOMKH6MT\",\n    \"memory\": {\n      \"freeGB\": 2.94,\n      \"totalGB\": 15.81,\n      \"usedPercent\": 81.4\n    },\n    \"uptimeHours\": 21.3,\n    \"status\": \"ok\",\n    \"type\": \"system\",\n    \"name\": \"LAPTOP-GOMKH6MT\",\n    \"title\": \"System Info: LAPTOP-GOMKH6MT\",\n    \"message\": \"Microsoft Windows 11 Home | CPU 67% | RAM 81.4% used\",\n    \"count\": 1,\n    \"total\": 1,\n    \"data\": {\n      \"uptimeHours\": 21.3\n    }\n  }\n}",
+  "json": {
+    "username": "justi",
+    "cpu": {
+      "logicalProcessors": 8,
+      "name": "AMD Ryzen 7 3750H with Radeon Vega Mobile Gfx  ",
+      "cores": 4,
+      "loadPercent": 67
+    },
+    "osVersion": "10.0.26100",
+    "disks": [
+      {
+        "Name": "C",
+        "usedGB": 469.25,
+        "freeGB": 6.59
+      }
+    ],
+    "os": "Microsoft Windows 11 Home",
+    "hostname": "LAPTOP-GOMKH6MT",
+    "memory": {
+      "freeGB": 2.94,
+      "totalGB": 15.81,
+      "usedPercent": 81.4
+    },
+    "uptimeHours": 21.3,
+    "status": "ok",
+    "type": "system",
+    "name": "LAPTOP-GOMKH6MT",
+    "title": "System Info: LAPTOP-GOMKH6MT",
+    "message": "Microsoft Windows 11 Home | CPU 67% | RAM 81.4% used",
+    "count": 1,
+    "total": 1,
+    "data": {
+      "uptimeHours": 21.3
+    }
+  },
+  "structured": {
+    "ok": true,
+    "data": {
+      "username": "justi",
+      "cpu": {
+        "logicalProcessors": 8,
+        "name": "AMD Ryzen 7 3750H with Radeon Vega Mobile Gfx  ",
+        "cores": 4,
+        "loadPercent": 67
+      },
+      "osVersion": "10.0.26100",
+      "disks": [
+        {
+          "Name": "C",
+          "usedGB": 469.25,
+          "freeGB": 6.59
+        }
+      ],
+      "os": "Microsoft Windows 11 Home",
+      "hostname": "LAPTOP-GOMKH6MT",
+      "memory": {
+        "freeGB": 2.94,
+        "totalGB": 15.81,
+        "usedPercent": 81.4
+      },
+      "uptimeHours": 21.3,
+      "status": "ok",
+      "type": "system",
+      "name": "LAPTOP-GOMKH6MT",
+      "title": "System Info: LAPTOP-GOMKH6MT",
+      "message": "Microsoft Windows 11 Home | CPU 67% | RAM 81.4% used",
+      "count": 1,
+      "total": 1,
+      "data": {
+        "uptimeHours": 21.3
+      }
+    }
+  },
+  "raw": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"ok\": true,\n  \"data\": {\n    \"username\": \"justi\",\n    \"cpu\": {\n      \"logicalProcessors\": 8,\n      \"name\": \"AMD Ryzen 7 3750H with Radeon Vega Mobile Gfx  \",\n      \"cores\": 4,\n      \"loadPercent\": 67\n    },\n    \"osVersion\": \"10.0.26100\",\n    \"disks\": [\n      {\n        \"Name\": \"C\",\n        \"usedGB\": 469.25,\n        \"freeGB\": 6.59\n      }\n    ],\n    \"os\": \"Microsoft Windows 11 Home\",\n    \"hostname\": \"LAPTOP-GOMKH6MT\",\n    \"memory\": {\n      \"freeGB\": 2.94,\n      \"totalGB\": 15.81,\n      \"usedPercent\": 81.4\n    },\n    \"uptimeHours\": 21.3,\n    \"status\": \"ok\",\n    \"type\": \"system\",\n    \"name\": \"LAPTOP-GOMKH6MT\",\n    \"title\": \"System Info: LAPTOP-GOMKH6MT\",\n    \"message\": \"Microsoft Windows 11 Home | CPU 67% | RAM 81.4% used\",\n    \"count\": 1,\n    \"total\": 1,\n    \"data\": {\n      \"uptimeHours\": 21.3\n    }\n  }\n}"
+      }
+    ],
+    "structuredContent": {
+      "ok": true,
+      "data": {
+        "username": "justi",
+        "cpu": {
+          "logicalProcessors": 8,
+          "name": "AMD Ryzen 7 3750H with Radeon Vega Mobile Gfx  ",
+          "cores": 4,
+          "loadPercent": 67
+        },
+        "osVersion": "10.0.26100",
+        "disks": [
+          {
+            "Name": "C",
+            "usedGB": 469.25,
+            "freeGB": 6.59
+          }
+        ],
+        "os": "Microsoft Windows 11 Home",
+        "hostname": "LAPTOP-GOMKH6MT",
+        "memory": {
+          "freeGB": 2.94,
+          "totalGB": 15.81,
+          "usedPercent": 81.4
+        },
+        "uptimeHours": 21.3,
+        "status": "ok",
+        "type": "system",
+        "name": "LAPTOP-GOMKH6MT",
+        "title": "System Info: LAPTOP-GOMKH6MT",
+        "message": "Microsoft Windows 11 Home | CPU 67% | RAM 81.4% used",
+        "count": 1,
+        "total": 1,
+        "data": {
+          "uptimeHours": 21.3
+        }
+      }
+    },
+    "isError": false
+  }
+}
