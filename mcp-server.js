@@ -743,6 +743,110 @@ function normalizeToolError(err, toolName) {
   });
 }
 
+// ── Security boundary, scopes, and receipts ───────────────────────────────────
+// Security configuration is intentionally launch-time only. An MCP client must
+// never be able to grant itself more authority by calling a tool.
+const SECURITY_MODE = String(process.env.REFLEX_SECURITY_MODE || 'guarded').toLowerCase();
+const ALLOWED_PATHS = String(process.env.REFLEX_ALLOWED_PATHS || '')
+  .split(';').map((value) => value.trim()).filter(Boolean).map((value) => path.resolve(value));
+const ALLOWED_APPS = String(process.env.REFLEX_ALLOWED_APPS || '')
+  .split(';').map((value) => value.trim().toLowerCase()).filter(Boolean);
+const AUDIT_DIR = path.resolve(process.env.REFLEX_AUDIT_DIR || path.join(os.homedir(), '.reflex', 'audit'));
+const AUDIT_FILE = path.join(AUDIT_DIR, 'action-receipts.jsonl');
+const AUDIT_LIMIT = 100;
+const HIGH_RISK_TOOLS = new Set([
+  'run_command', 'shell_open', 'shell_send', 'kill_process', 'bulk_kill_processes',
+  'manage_service', 'delete_file', 'write_file', 'move_file', 'copy_file',
+  'archive_extract', 'open_url', 'write_clipboard', 'close_window',
+]);
+const SENSITIVE_READ_TOOLS = new Set(['read_clipboard', 'get_clipboard_history', 'get_environment_vars', 'take_screenshot', 'screenshot_window', 'window_screenshot_grid']);
+const FILE_PATH_ARGUMENTS = ['filePath', 'source', 'destination', 'dir', 'dirPath', 'zipPath', 'cwd'];
+
+function redactValue(value, key = '') {
+  const sensitive = /(?:password|passwd|secret|token|api[_-]?key|authorization|cookie|credential|private[_-]?key)/i.test(key);
+  if (sensitive && value != null) return '[REDACTED]';
+  if (Array.isArray(value)) return value.map((item) => redactValue(item));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([entryKey, entryValue]) => [entryKey, redactValue(entryValue, entryKey)]));
+  }
+  return value;
+}
+
+function pathAllowed(candidate) {
+  if (ALLOWED_PATHS.length === 0 || !candidate) return true;
+  const resolved = path.resolve(String(candidate)).toLowerCase();
+  return ALLOWED_PATHS.some((root) => resolved === root.toLowerCase() || resolved.startsWith(`${root.toLowerCase()}${path.sep}`));
+}
+
+function assertScope(toolName, args) {
+  for (const key of FILE_PATH_ARGUMENTS) {
+    if (args[key] && !pathAllowed(args[key])) {
+      throw new ToolContractError({
+        code: 'scope_denied', category: 'permission', retryable: false,
+        message: `${toolName} cannot access ${key} outside the configured REFLEX_ALLOWED_PATHS scope.`,
+        suggestedAction: 'Ask the Windows owner to restart Reflex with a narrower or appropriate REFLEX_ALLOWED_PATHS value.',
+        details: { toolName, argument: key, configuredScopes: ALLOWED_PATHS },
+      });
+    }
+  }
+  if (args.processName && ALLOWED_APPS.length && !ALLOWED_APPS.some((name) => String(args.processName).toLowerCase().includes(name))) {
+    throw new ToolContractError({ code: 'scope_denied', category: 'permission', retryable: false,
+      message: `${toolName} is not permitted for that application by REFLEX_ALLOWED_APPS.`,
+      suggestedAction: 'Ask the Windows owner to update the launch-time application scope.', details: { toolName } });
+  }
+}
+
+function authorizeToolCall(toolName, args) {
+  assertScope(toolName, args);
+  if (SECURITY_MODE === 'developer') return;
+  if (SECURITY_MODE !== 'guarded') {
+    throw new ToolContractError({ code: 'invalid_security_mode', category: 'validation', retryable: false,
+      message: 'REFLEX_SECURITY_MODE must be "guarded" or "developer".', suggestedAction: 'Restart Reflex with a supported security mode.' });
+  }
+  if (HIGH_RISK_TOOLS.has(toolName)) {
+    throw new ToolContractError({ code: 'approval_required', category: 'permission', retryable: false,
+      message: `${toolName} is blocked in guarded mode because it can change the host or execute commands.`,
+      suggestedAction: 'Keep guarded mode for untrusted work. For a supervised development session, the Windows owner must restart Reflex with REFLEX_SECURITY_MODE=developer and explicit REFLEX_ALLOWED_PATHS/REFLEX_ALLOWED_APPS scopes.',
+      details: { toolName, mode: SECURITY_MODE } });
+  }
+  if (SENSITIVE_READ_TOOLS.has(toolName)) {
+    throw new ToolContractError({ code: 'approval_required', category: 'permission', retryable: false,
+      message: `${toolName} is blocked in guarded mode because it can expose sensitive on-screen, clipboard, or environment data.`,
+      suggestedAction: 'Ask the Windows owner to use a supervised developer session with narrow scopes.', details: { toolName, mode: SECURITY_MODE } });
+  }
+}
+
+function writeReceipt(toolName, args, outcome) {
+  try {
+    fs.mkdirSync(AUDIT_DIR, { recursive: true });
+    const receipt = {
+      timestamp: new Date().toISOString(), toolName, outcome,
+      actor: resolveControlOwner({}), securityMode: SECURITY_MODE,
+      arguments: redactValue(args),
+    };
+    fs.appendFileSync(AUDIT_FILE, `${JSON.stringify(receipt)}\n`, 'utf8');
+  } catch { /* Audit failure must never silently grant an action. */ }
+}
+
+function getSecurityPolicy() {
+  return {
+    mode: SECURITY_MODE, allowedPaths: ALLOWED_PATHS, allowedApps: ALLOWED_APPS,
+    auditFile: AUDIT_FILE, highRiskTools: [...HIGH_RISK_TOOLS], sensitiveReadTools: [...SENSITIVE_READ_TOOLS],
+    note: 'Policy is fixed at process launch. MCP clients cannot relax it.',
+  };
+}
+
+function getActionReceipts() {
+  try {
+    if (!fs.existsSync(AUDIT_FILE)) return { receipts: [], count: 0, auditFile: AUDIT_FILE };
+    const lines = fs.readFileSync(AUDIT_FILE, 'utf8').split(/\r?\n/).filter(Boolean).slice(-AUDIT_LIMIT);
+    return { receipts: lines.map((line) => JSON.parse(line)).reverse(), count: lines.length, auditFile: AUDIT_FILE };
+  } catch (error) {
+    throw new ToolContractError({ code: 'audit_unavailable', category: 'internal', retryable: true,
+      message: `Unable to read action receipts: ${error.message}`, suggestedAction: 'Check REFLEX_AUDIT_DIR permissions.' });
+  }
+}
+
 // ── SendKeys escaping (for literal text typing) ───────────────────────────────
 function escapeSendKeys(text) {
   // Wrap SendKeys special chars in {} so they are typed literally
@@ -3026,6 +3130,16 @@ function reflexMeta() {
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 const TOOLS = [
+  {
+    name: 'get_security_policy',
+    description: 'Show the launch-time security mode, allowed file/application scopes, blocked high-risk tools, and receipt location. MCP clients cannot relax this policy.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'get_action_receipts',
+    description: 'Read the most recent redacted, durable action receipts for this Reflex user profile.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+  },
   // ── System info ──────────────────────────────────────────────────────────
   {
     name: 'get_system_info',
@@ -4140,6 +4254,8 @@ function getPromptMessages(name, args) {
 
 async function handleTool(name, args) {
   switch (name) {
+    case 'get_security_policy': return getSecurityPolicy();
+    case 'get_action_receipts': return getActionReceipts();
     case 'get_system_info': {
       const sysInfo = await getSystemInfo();
       const disks = sysInfo?.disks || [];
@@ -4639,7 +4755,9 @@ rl.on('line', async (rawLine) => {
         const toolArgs = (params && Object.prototype.hasOwnProperty.call(params, 'arguments')) ? params.arguments : {};
         try {
           const validated = validateToolCallParams(toolName, toolArgs);
+          authorizeToolCall(toolName, validated.args);
           const data = await handleTool(toolName, validated.args);
+          writeReceipt(toolName, validated.args, 'succeeded');
           // Screenshot returns image content
           if (data && data._isImage) {
             result = makeImageResult(data);
@@ -4647,6 +4765,7 @@ rl.on('line', async (rawLine) => {
             result = makeResult(data);
           }
         } catch (err) {
+          writeReceipt(toolName, toolArgs || {}, `blocked_or_failed:${normalizeToolError(err, toolName).code}`);
           result = makeErrorResult(err, toolName);
         }
         break;
