@@ -510,10 +510,36 @@ async function maybeAnnounceAction(toolName, args) {
   }
 }
 
+// ── PowerShell preamble (prepended to every temp script) ─────────────────────
+// 1. Per-monitor DPI awareness. Without it Windows virtualizes screen metrics for the
+//    helper process: a 1920x1080 display at 125% scaling reports as 1536x864, so
+//    CopyFromScreen, GetWindowRect and SetCursorPos disagree with the real desktop and
+//    injected clicks land off-target. This must run before WinForms or System.Drawing
+//    touch the screen, so it goes first in the file.
+// 2. UTF-8 stdout, matching the encoding execSync decodes with, so returned text
+//    (clipboard contents, file reads, window titles) survives the trip back.
+// Each call is wrapped: the exports are version-gated (AwarenessContext = Win10 1703+,
+// shcore = Win8.1+, user32 = Vista+) and a missing export throws at call time, not load.
+const PS_PREAMBLE = `if (-not ('Reflex.Native' -as [type])) {
+Add-Type -Namespace Reflex -Name Native -MemberDefinition @'
+[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+[DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr ctx);
+[DllImport("shcore.dll")] public static extern int SetProcessDpiAwareness(int awareness);
+'@
+}
+$reflexDpi = $false
+try { $reflexDpi = [Reflex.Native]::SetProcessDpiAwarenessContext([IntPtr](-4)) } catch {}
+if (-not $reflexDpi) { try { [void][Reflex.Native]::SetProcessDpiAwareness(2); $reflexDpi = $true } catch {} }
+if (-not $reflexDpi) { try { [void][Reflex.Native]::SetProcessDPIAware() } catch {} }
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+`;
+
 // ── PowerShell runner (temp-file approach for complex scripts) ────────────────
 function psRun(script, timeoutMs = 15000) {
   const tmp = path.join(os.tmpdir(), `osb_${Date.now()}_${Math.random().toString(36).slice(2)}.ps1`);
-  fs.writeFileSync(tmp, script, 'utf8');
+  // UTF-8 BOM is required: Windows PowerShell 5.1 decodes a BOM-less .ps1 as ANSI/CP1252,
+  // which mojibakes every non-ASCII character passed through (an em dash becomes "a EUR").
+  fs.writeFileSync(tmp, '﻿' + PS_PREAMBLE + script, 'utf8');
   try {
     return execSync(
       `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${tmp}"`,
