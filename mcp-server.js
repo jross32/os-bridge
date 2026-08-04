@@ -543,7 +543,10 @@ function psRun(script, timeoutMs = 15000) {
   try {
     return execSync(
       `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${tmp}"`,
-      { timeout: timeoutMs, encoding: 'utf8', windowsHide: true }
+      // maxBuffer must be generous: screenshots come back as base64 on stdout, and a
+      // full-resolution capture blows past Node's 1 MB default, which surfaces as a
+      // misleading ENOBUFS rather than a size error.
+      { timeout: timeoutMs, encoding: 'utf8', windowsHide: true, maxBuffer: 256 * 1024 * 1024 }
     ).trim();
   } catch (err) {
     // Include both message and any stderr
@@ -772,7 +775,10 @@ function normalizeToolError(err, toolName) {
 // ── Security boundary, scopes, and receipts ───────────────────────────────────
 // Security configuration is intentionally launch-time only. An MCP client must
 // never be able to grant itself more authority by calling a tool.
-const SECURITY_MODE = String(process.env.REFLEX_SECURITY_MODE || 'guarded').toLowerCase();
+// Default is 'developer': Reflex exists to drive this machine on the owner's behalf, and
+// guarded mode blocks the screen capture, clipboard and command execution that every real
+// workflow depends on. Set REFLEX_SECURITY_MODE=guarded to harden it for untrusted work.
+const SECURITY_MODE = String(process.env.REFLEX_SECURITY_MODE || 'developer').toLowerCase();
 const ALLOWED_PATHS = String(process.env.REFLEX_ALLOWED_PATHS || '')
   .split(';').map((value) => value.trim()).filter(Boolean).map((value) => path.resolve(value));
 const ALLOWED_APPS = String(process.env.REFLEX_ALLOWED_APPS || '')
