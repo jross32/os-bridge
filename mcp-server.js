@@ -286,6 +286,23 @@ function cleanupOverlayDirectory(dir) {
   try { fs.rmSync(dir, { recursive: true, force: true }); } catch {}
 }
 
+// SetSystemCursor changes the cursor for the whole desktop, and the overlay only undoes it in a
+// `finally` — which never runs if that process is force-killed (taskkill /F, Stop-Process -Force,
+// a crash). The blue Reflex pointer then survives its owner and the user is left with a cursor no
+// running program claims. SPI_SETCURSORS (0x0057) reloads every cursor from the registry defaults,
+// so calling it is safe even when nothing was overridden. Best-effort by design: never throw.
+function restoreSystemCursors() {
+  if (process.platform !== 'win32') return;
+  try {
+    execSync(
+      'powershell -NoProfile -NonInteractive -Command "' +
+        "Add-Type -Namespace ReflexCur -Name N -MemberDefinition '[DllImport(\\\"user32.dll\\\")] public static extern bool SystemParametersInfo(uint a, uint b, System.IntPtr c, uint d);'; " +
+        '[void][ReflexCur.N]::SystemParametersInfo(0x0057, 0, [System.IntPtr]::Zero, 0)"',
+      { timeout: 8000, windowsHide: true, stdio: 'ignore' }
+    );
+  } catch {}
+}
+
 function stopControlOverlay() {
   const proc = controlOverlay.proc;
   const dir = controlOverlay.commandDir;
@@ -306,6 +323,9 @@ function stopControlOverlay() {
   } else {
     cleanupOverlayDirectory(dir);
   }
+  // Only worth the ~200ms spawn if a custom cursor was actually installed. This still runs when
+  // the overlay exited cleanly and restored them itself; SPI_SETCURSORS is idempotent.
+  if (controlOverlay.cursorHighlight) restoreSystemCursors();
   controlOverlay.agentName = null;
   controlOverlay.startedAt = null;
 }
@@ -4839,3 +4859,9 @@ process.on('SIGINT', () => {
   cleanupBeforeExit();
   process.exit(0);
 });
+
+// Self-heal on startup: if a previous Reflex was force-killed while the takeover cursor was
+// installed, the blue pointer outlived it and no running process owns it. Clearing any stale
+// override here means the user gets their normal cursor back the moment Reflex runs again,
+// without having to know what happened or how to undo it themselves.
+restoreSystemCursors();
